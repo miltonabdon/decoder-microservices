@@ -5,5 +5,4 @@ spring:
     import: "optional:configserver:"
   cloud:
     config:
-      uri: http://config-user:config-pass@localhost:8888
       fail-fast: false

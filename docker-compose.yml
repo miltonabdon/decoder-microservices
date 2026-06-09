@@ -1,0 +1,268 @@
+version: '3.9'
+
+networks:
+  decoder-net:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  rabbitmq-data:
+  es-data:
+
+services:
+  # ─── INFRAESTRUTURA ────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: decoder-postgres
+    environment:
+      POSTGRES_USER: decoder
+      POSTGRES_PASSWORD: decoder123
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./scripts/create-databases.sh:/docker-entrypoint-initdb.d/create-databases.sh
+    ports:
+      - "5432:5432"
+    networks:
+      - decoder-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U decoder"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:4.3.1-management-alpine
+    container_name: decoder-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: decoder
+      RABBITMQ_DEFAULT_PASS: decoder123
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - decoder-net
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.4.2
+    container_name: decoder-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    networks:
+      - decoder-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:9.4.2
+    container_name: decoder-kibana
+    environment:
+      ELASTICSEARCH_HOSTS: '["http://elasticsearch:9200"]'
+    ports:
+      - "5601:5601"
+    networks:
+      - decoder-net
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:9.4.2
+    container_name: decoder-logstash
+    volumes:
+      - ./logstash/pipeline:/usr/share/logstash/pipeline
+    ports:
+      - "5000:5000/tcp"
+    networks:
+      - decoder-net
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  # ─── SERVIÇOS DE DESCOBERTA / CONFIG ────────────────────────────
+  eureka-server:
+    build:
+      context: ./eureka-server
+      dockerfile: Dockerfile
+    container_name: decoder-eureka
+    ports:
+      - "8761:8761"
+    networks:
+      - decoder-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://admin:admin123@localhost:8761/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  config-server:
+    build:
+      context: ./config-server
+      dockerfile: Dockerfile
+    container_name: decoder-config
+    environment:
+      SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS: file:///config-repo
+    volumes:
+      - ./config-repo:/config-repo:ro
+    ports:
+      - "8888:8888"
+    networks:
+      - decoder-net
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://config-user:config-pass@localhost:8888/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  # ─── MICROSSERVIÇOS DE NEGÓCIO ─────────────────────────────────
+  auth-user-service:
+    build:
+      context: ./auth-user-service
+      dockerfile: Dockerfile
+    container_name: decoder-authuser
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_CONFIG_IMPORT: "configserver:http://config-user:config-pass@config-server:8888"
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://admin:admin123@eureka-server:8761/eureka/
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: authuser_db
+      DB_USER: decoder
+      DB_PASSWORD: decoder123
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: decoder
+      RABBITMQ_PASSWORD: decoder123
+      LOGSTASH_HOST: logstash
+      LOGSTASH_PORT: 5000
+      JWT_SECRET: decoder-poc-jwt-secret-key-at-least-256-bits-long-for-hs512
+    ports:
+      - "8081:8081"
+    networks:
+      - decoder-net
+    depends_on:
+      config-server:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8081/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 8
+
+  course-service:
+    build:
+      context: ./course-service
+      dockerfile: Dockerfile
+    container_name: decoder-course
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_CONFIG_IMPORT: "configserver:http://config-user:config-pass@config-server:8888"
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://admin:admin123@eureka-server:8761/eureka/
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: course_db
+      DB_USER: decoder
+      DB_PASSWORD: decoder123
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: decoder
+      RABBITMQ_PASSWORD: decoder123
+      LOGSTASH_HOST: logstash
+      LOGSTASH_PORT: 5000
+    ports:
+      - "8082:8082"
+    networks:
+      - decoder-net
+    depends_on:
+      auth-user-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8082/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 8
+
+  notification-service:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    container_name: decoder-notification
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_CONFIG_IMPORT: "configserver:http://config-user:config-pass@config-server:8888"
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://admin:admin123@eureka-server:8761/eureka/
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: notification_db
+      DB_USER: decoder
+      DB_PASSWORD: decoder123
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: decoder
+      RABBITMQ_PASSWORD: decoder123
+      LOGSTASH_HOST: logstash
+      LOGSTASH_PORT: 5000
+    ports:
+      - "8083:8083"
+    networks:
+      - decoder-net
+    depends_on:
+      config-server:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8083/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 8
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: decoder-gateway
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_CONFIG_IMPORT: "configserver:http://config-user:config-pass@config-server:8888"
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://admin:admin123@eureka-server:8761/eureka/
+      JWT_SECRET: decoder-poc-jwt-secret-key-at-least-256-bits-long-for-hs512
+      LOGSTASH_HOST: logstash
+      LOGSTASH_PORT: 5000
+    ports:
+      - "8080:8080"
+    networks:
+      - decoder-net
+    depends_on:
+      auth-user-service:
+        condition: service_healthy
+      course-service:
+        condition: service_healthy
+      notification-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5

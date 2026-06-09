@@ -1,0 +1,66 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      routes:
+        - id: auth-user-route
+          uri: lb://auth-user-service
+          predicates:
+            - Path=/auth/users/**,/auth/login
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: auth-user-cb
+                fallbackUri: forward:/fallback/auth
+
+        - id: course-route
+          uri: lb://course-service
+          predicates:
+            - Path=/api/courses/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: course-cb
+                fallbackUri: forward:/fallback/courses
+
+        - id: notification-route
+          uri: lb://notification-service
+          predicates:
+            - Path=/api/notifications/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: notification-cb
+                fallbackUri: forward:/fallback/notifications
+
+decoder:
+  jwt:
+    secret: ${JWT_SECRET:decoder-poc-jwt-secret-key-at-least-256-bits-long-for-hs512}
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      auth-user-cb:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 5s
+      course-cb:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 5s
+      notification-cb:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 5s
+
+logstash:
+  host: ${LOGSTASH_HOST:localhost}
+  port: ${LOGSTASH_PORT:5000}

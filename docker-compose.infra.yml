@@ -1,0 +1,94 @@
+version: '3.9'
+
+networks:
+  decoder-net:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  rabbitmq-data:
+  es-data:
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: decoder-postgres
+    environment:
+      POSTGRES_USER: decoder
+      POSTGRES_PASSWORD: decoder123
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./scripts/create-databases.sh:/docker-entrypoint-initdb.d/create-databases.sh
+    ports:
+      - "5432:5432"
+    networks:
+      - decoder-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U decoder"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:4.3.1-management-alpine
+    container_name: decoder-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: decoder
+      RABBITMQ_DEFAULT_PASS: decoder123
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - decoder-net
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.4.2
+    container_name: decoder-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    networks:
+      - decoder-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:9.4.2
+    container_name: decoder-kibana
+    environment:
+      ELASTICSEARCH_HOSTS: '["http://elasticsearch:9200"]'
+    ports:
+      - "5601:5601"
+    networks:
+      - decoder-net
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:9.4.2
+    container_name: decoder-logstash
+    volumes:
+      - ./logstash/pipeline:/usr/share/logstash/pipeline
+    ports:
+      - "5000:5000/tcp"
+    networks:
+      - decoder-net
+    depends_on:
+      elasticsearch:
+        condition: service_healthy

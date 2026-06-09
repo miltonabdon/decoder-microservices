@@ -1,0 +1,20 @@
+# Maven build output
+target/
+**/target/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+
+# Screenshots (gerados durante o run, não precisam de versionamento)
+*.png
+
+# Logs
+*.log
+
+# Environment
+.env

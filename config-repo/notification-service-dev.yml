@@ -1,25 +1,23 @@
 server:
-  port: 8081
+  port: 8083
 
 spring:
   application:
-    name: auth-user-service
+    name: notification-service
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:authuser_db}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:notification_db}
     username: ${DB_USER:decoder}
     password: ${DB_PASSWORD:decoder123}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: create
     show-sql: false
     properties:
       hibernate:
-        format_sql: false
         dialect: org.hibernate.dialect.PostgreSQLDialect
   flyway:
-    enabled: true
-    locations: classpath:db/migration
+    enabled: false
   rabbitmq:
     host: ${RABBITMQ_HOST:localhost}
     port: 5672
@@ -27,20 +25,20 @@ spring:
     password: ${RABBITMQ_PASSWORD:decoder123}
 
 decoder:
-  jwt:
-    secret: ${JWT_SECRET:decoder-poc-jwt-secret-key-at-least-256-bits-long-for-hs512}
-    expiration-ms: 86400000
   rabbitmq:
     exchanges:
       users: ms.users.exchange
+      enrollments: ms.courses.exchange
       notification-commands: ms.notification.commands.exchange
     queues:
-      users-course: ms.courseservice.users.queue
       users-notification: ms.notificationservice.users.queue
+      enrollment-notification: ms.notificationservice.enrollments.queue
+      notification-commands: ms.notification.commands.queue
+      notification-commands-dlq: ms.notification.commands.dlq
     routing-keys:
       user-created: user.created
-      user-updated: user.updated
       user-deleted: user.deleted
+      enrollment-created: enrollment.created
 
 logstash:
   host: ${LOGSTASH_HOST:localhost}

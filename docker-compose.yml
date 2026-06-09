@@ -45,8 +45,8 @@ services:
       - decoder-net
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
-      interval: 10s
-      timeout: 5s
+      interval: 15s
+      timeout: 30s
       retries: 5
 
   elasticsearch:
@@ -59,7 +59,7 @@ services:
     volumes:
       - es-data:/usr/share/elasticsearch/data
     ports:
-      - "9200:9200"
+      - "9201:9200"
     networks:
       - decoder-net
     healthcheck:
@@ -74,7 +74,7 @@ services:
     environment:
       ELASTICSEARCH_HOSTS: '["http://elasticsearch:9200"]'
     ports:
-      - "5601:5601"
+      - "5602:5601"
     networks:
       - decoder-net
     depends_on:
@@ -87,7 +87,7 @@ services:
     volumes:
       - ./logstash/pipeline:/usr/share/logstash/pipeline
     ports:
-      - "5000:5000/tcp"
+      - "5001:5000/tcp"
     networks:
       - decoder-net
     depends_on:
@@ -105,7 +105,7 @@ services:
     networks:
       - decoder-net
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://admin:admin123@localhost:8761/actuator/health || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- --header 'Authorization: Basic YWRtaW46YWRtaW4xMjM=' http://localhost:8761/actuator/health | grep -q UP || exit 1"]
       interval: 15s
       timeout: 10s
       retries: 5
@@ -127,7 +127,7 @@ services:
       eureka-server:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://config-user:config-pass@localhost:8888/actuator/health || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- --header 'Authorization: Basic Y29uZmlnLXVzZXI6Y29uZmlnLXBhc3M=' http://localhost:8888/actuator/health | grep -q UP || exit 1"]
       interval: 15s
       timeout: 10s
       retries: 5
@@ -165,7 +165,7 @@ services:
       rabbitmq:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8081/actuator/health || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/actuator/health | grep -q UP || exit 1"]
       interval: 15s
       timeout: 10s
       retries: 8
@@ -197,7 +197,7 @@ services:
       auth-user-service:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8082/actuator/health || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8082/actuator/health | grep -q UP || exit 1"]
       interval: 15s
       timeout: 10s
       retries: 8
@@ -233,7 +233,7 @@ services:
       rabbitmq:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8083/actuator/health || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8083/actuator/health | grep -q UP || exit 1"]
       interval: 15s
       timeout: 10s
       retries: 8
@@ -262,7 +262,7 @@ services:
       notification-service:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q UP || exit 1"]
       interval: 15s
       timeout: 10s
       retries: 5

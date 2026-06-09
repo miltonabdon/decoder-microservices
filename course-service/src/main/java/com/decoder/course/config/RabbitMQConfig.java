@@ -5,6 +5,7 @@ import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -21,12 +22,12 @@ public class RabbitMQConfig {
     @Bean public Queue enrollmentNotifQueue() { return QueueBuilder.durable(enrollmentNotifQueue).build(); }
 
     @Bean
-    public Binding usersCourseBinding(Queue usersCourseQueue, TopicExchange usersTopicExchange) {
+    public Binding usersCourseBinding(@Qualifier("usersCourseQueue") Queue usersCourseQueue, @Qualifier("usersTopicExchange") TopicExchange usersTopicExchange) {
         return BindingBuilder.bind(usersCourseQueue).to(usersTopicExchange).with("user.#");
     }
 
     @Bean
-    public Binding enrollmentNotifBinding(Queue enrollmentNotifQueue, TopicExchange coursesTopicExchange) {
+    public Binding enrollmentNotifBinding(@Qualifier("enrollmentNotifQueue") Queue enrollmentNotifQueue, @Qualifier("coursesTopicExchange") TopicExchange coursesTopicExchange) {
         return BindingBuilder.bind(enrollmentNotifQueue).to(coursesTopicExchange).with("enrollment.#");
     }
 

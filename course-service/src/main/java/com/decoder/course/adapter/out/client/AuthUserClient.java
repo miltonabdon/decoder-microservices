@@ -10,5 +10,5 @@ import java.util.UUID;
 @FeignClient(name = "auth-user-service", path = "/auth/users")
 public interface AuthUserClient {
     @GetMapping("/{userId}")
-    ResponseEntity<UserResponseDto> getUserById(@PathVariable UUID userId);
+    ResponseEntity<UserResponseDto> getUserById(@PathVariable("userId") UUID userId);
 }

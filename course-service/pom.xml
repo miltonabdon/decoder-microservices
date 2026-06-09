@@ -28,7 +28,13 @@
   </dependencies>
   <build>
     <plugins>
-      <plugin><groupId>org.springframework.boot</groupId><artifactId>spring-boot-maven-plugin</artifactId></plugin>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <configuration>
+          <mainClass>com.decoder.course.CourseApplication</mainClass>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
 </project>

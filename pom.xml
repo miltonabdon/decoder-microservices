@@ -82,6 +82,13 @@
           <groupId>org.springframework.boot</groupId>
           <artifactId>spring-boot-maven-plugin</artifactId>
           <version>${spring-boot.version}</version>
+          <executions>
+            <execution>
+              <goals>
+                <goal>repackage</goal>
+              </goals>
+            </execution>
+          </executions>
           <configuration>
             <excludes>
               <exclude>
@@ -100,6 +107,7 @@
             <target>26</target>
             <compilerArgs>
               <arg>--enable-preview</arg>
+              <arg>-parameters</arg>
             </compilerArgs>
             <annotationProcessorPaths>
               <path>

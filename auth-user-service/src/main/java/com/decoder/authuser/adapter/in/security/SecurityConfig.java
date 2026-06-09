@@ -24,7 +24,7 @@ public class SecurityConfig {
         http.csrf(c -> c.disable())
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(a -> a
-                .requestMatchers("/auth/users/login", "/auth/users").permitAll()
+                .requestMatchers("/auth/users/login", "/auth/users", "/auth/users/logout").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
                 .anyRequest().authenticated());
         return http.build();

@@ -1,6 +1,7 @@
 package com.decoder.gateway.filter;
 
 import com.decoder.gateway.security.JwtUtil;
+import com.decoder.gateway.security.TokenRevocationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -20,6 +21,7 @@ import java.util.List;
 public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
     private final JwtUtil jwtUtil;
+    private final TokenRevocationService tokenRevocationService;
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
@@ -33,6 +35,8 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             (path.equals("/auth/users") && "POST".equals(method)) ||
             // POST /auth/users/login — autenticação
             (path.equals("/auth/users/login") && "POST".equals(method)) ||
+            // POST /auth/users/logout — revogação de token (token validado internamente)
+            (path.equals("/auth/users/logout") && "POST".equals(method)) ||
             // Actuator (health checks)
             path.startsWith("/actuator") ||
             // Fallback endpoints do Circuit Breaker
@@ -53,6 +57,13 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         var token = authHeader.substring(7);
         if (!jwtUtil.validateToken(token)) {
             log.warn("Invalid JWT token for path: {}", path);
+            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+            return exchange.getResponse().setComplete();
+        }
+
+        // Checar blacklist
+        var jti = jwtUtil.getJtiFromToken(token);
+        if (tokenRevocationService.isRevoked(jti)) {
             exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
             return exchange.getResponse().setComplete();
         }

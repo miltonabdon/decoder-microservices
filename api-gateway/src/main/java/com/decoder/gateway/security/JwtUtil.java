@@ -42,6 +42,10 @@ public class JwtUtil {
         return getClaims(token).get("username", String.class);
     }
 
+    public String getJtiFromToken(String token) {
+        return getClaims(token).getId();
+    }
+
     private Claims getClaims(String token) {
         return Jwts.parser()
             .verifyWith(key)

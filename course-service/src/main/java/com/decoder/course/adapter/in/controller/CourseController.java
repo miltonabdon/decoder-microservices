@@ -33,6 +33,11 @@ public class CourseController {
         return ResponseEntity.ok(courseService.findById(courseId));
     }
 
+    @GetMapping("/api/courses/{courseId}/detail")
+    public ResponseEntity<?> getCourseDetail(@PathVariable UUID courseId) {
+        return ResponseEntity.ok(courseService.getCourseDetail(courseId));
+    }
+
     @PutMapping("/api/courses/{courseId}")
     public ResponseEntity<?> updateCourse(@PathVariable UUID courseId, @RequestBody CourseRequestDto dto) {
         return ResponseEntity.ok(courseService.updateCourse(courseId, dto));

@@ -4,6 +4,11 @@ server:
 spring:
   application:
     name: api-gateway
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: 6379
+      timeout: 2000ms
   cloud:
     gateway:
       discovery:
@@ -11,11 +16,30 @@ spring:
           enabled: true
           lower-case-service-id: true
       routes:
+        - id: auth-login-route
+          uri: lb://auth-user-service
+          predicates:
+            - Path=/auth/users/login
+            - Method=POST
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 5
+                redis-rate-limiter.burstCapacity: 5
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@ipKeyResolver}"
+
         - id: auth-user-route
           uri: lb://auth-user-service
           predicates:
-            - Path=/auth/users/**,/auth/login
+            - Path=/auth/users/**,/auth/users
           filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 100
+                redis-rate-limiter.burstCapacity: 200
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@ipKeyResolver}"
             - name: CircuitBreaker
               args:
                 name: auth-user-cb

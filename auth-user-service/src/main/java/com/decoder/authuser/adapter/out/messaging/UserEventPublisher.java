@@ -1,40 +1,54 @@
 package com.decoder.authuser.adapter.out.messaging;
 
 import com.decoder.authuser.adapter.out.messaging.dto.UserEventDto;
+import com.decoder.authuser.adapter.out.persistence.OutboxRepository;
+import com.decoder.authuser.domain.model.OutboxEvent;
 import com.decoder.authuser.domain.model.UserModel;
 import com.decoder.authuser.domain.port.UserEventPublisherPort;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class UserEventPublisher implements UserEventPublisherPort {
-    private final RabbitTemplate rabbitTemplate;
 
-    @Value("${decoder.rabbitmq.exchanges.users}") private String usersExchange;
-    @Value("${decoder.rabbitmq.routing-keys.user-created}") private String userCreatedKey;
-    @Value("${decoder.rabbitmq.routing-keys.user-updated}") private String userUpdatedKey;
-    @Value("${decoder.rabbitmq.routing-keys.user-deleted}") private String userDeletedKey;
+    private final OutboxRepository outboxRepository;
+    private final ObjectMapper objectMapper;
 
     @Override
+    @SneakyThrows
     public void publishUserCreated(UserModel user) {
-        log.info("Publishing USER_CREATED userId={}", user.getId());
-        rabbitTemplate.convertAndSend(usersExchange, userCreatedKey, UserEventDto.from("USER_CREATED", user));
+        saveToOutbox("USER_CREATED", user);
     }
 
     @Override
+    @SneakyThrows
     public void publishUserUpdated(UserModel user) {
-        log.info("Publishing USER_UPDATED userId={}", user.getId());
-        rabbitTemplate.convertAndSend(usersExchange, userUpdatedKey, UserEventDto.from("USER_UPDATED", user));
+        saveToOutbox("USER_UPDATED", user);
     }
 
     @Override
+    @SneakyThrows
     public void publishUserDeleted(UserModel user) {
-        log.info("Publishing USER_DELETED userId={}", user.getId());
-        rabbitTemplate.convertAndSend(usersExchange, userDeletedKey, UserEventDto.from("USER_DELETED", user));
+        saveToOutbox("USER_DELETED", user);
+    }
+
+    @SneakyThrows
+    private void saveToOutbox(String eventType, UserModel user) {
+        var dto = UserEventDto.from(eventType, user);
+        var payload = objectMapper.writeValueAsString(dto);
+
+        var event = new OutboxEvent();
+        event.setAggregateType("User");
+        event.setAggregateId(user.getId().toString());
+        event.setEventType(eventType);
+        event.setPayload(payload);
+
+        outboxRepository.save(event);
+        log.info("Outbox event saved: {} userId={}", eventType, user.getId());
     }
 }

@@ -1,0 +1,51 @@
+{
+  "id": null,
+  "title": "Decoder Microservices Overview",
+  "tags": ["decoder", "microservices"],
+  "timezone": "browser",
+  "schemaVersion": 36,
+  "version": 1,
+  "refresh": "30s",
+  "panels": [
+    {
+      "id": 1,
+      "title": "HTTP Requests per Second",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "targets": [{
+        "expr": "sum(rate(http_server_requests_seconds_count{job=~\".*service\"}[1m])) by (job, uri, status)",
+        "legendFormat": "{{job}} {{uri}} {{status}}"
+      }]
+    },
+    {
+      "id": 2,
+      "title": "HTTP P99 Latency (ms)",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "targets": [{
+        "expr": "histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket[5m])) by (le, job))",
+        "legendFormat": "{{job}} p99"
+      }]
+    },
+    {
+      "id": 3,
+      "title": "JVM Heap Used (MB)",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "targets": [{
+        "expr": "jvm_memory_used_bytes{area=\"heap\"} / 1024 / 1024",
+        "legendFormat": "{{job}} {{id}}"
+      }]
+    },
+    {
+      "id": 4,
+      "title": "Hikari Active Connections",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "targets": [{
+        "expr": "hikaricp_connections_active",
+        "legendFormat": "{{job}} {{pool}}"
+      }]
+    }
+  ]
+}

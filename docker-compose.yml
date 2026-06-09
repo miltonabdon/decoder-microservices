@@ -11,12 +11,25 @@ volumes:
 
 services:
   # ─── INFRAESTRUTURA ────────────────────────────────────────────
+  redis:
+    image: redis:7.4-alpine
+    container_name: decoder-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - decoder-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   postgres:
     image: postgres:16-alpine
     container_name: decoder-postgres
     environment:
-      POSTGRES_USER: decoder
-      POSTGRES_PASSWORD: decoder123
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./scripts/create-databases.sh:/docker-entrypoint-initdb.d/create-databases.sh
@@ -25,7 +38,7 @@ services:
     networks:
       - decoder-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U decoder"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -34,8 +47,8 @@ services:
     image: rabbitmq:4.3.1-management-alpine
     container_name: decoder-rabbitmq
     environment:
-      RABBITMQ_DEFAULT_USER: decoder
-      RABBITMQ_DEFAULT_PASS: decoder123
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
     ports:
@@ -94,6 +107,19 @@ services:
       elasticsearch:
         condition: service_healthy
 
+  zipkin:
+    image: openzipkin/zipkin:3.4
+    container_name: decoder-zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - decoder-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9411/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+
   # ─── SERVIÇOS DE DESCOBERTA / CONFIG ────────────────────────────
   eureka-server:
     build:
@@ -140,19 +166,20 @@ services:
     container_name: decoder-authuser
     environment:
       SPRING_PROFILES_ACTIVE: dev
-      SPRING_CONFIG_IMPORT: "configserver:http://config-user:config-pass@config-server:8888"
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://admin:admin123@eureka-server:8761/eureka/
+      SPRING_CONFIG_IMPORT: "configserver:http://${CONFIG_USER}:${CONFIG_PASSWORD}@config-server:8888"
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://${EUREKA_USER}:${EUREKA_PASSWORD}@eureka-server:8761/eureka/
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: authuser_db
-      DB_USER: decoder
-      DB_PASSWORD: decoder123
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
       RABBITMQ_HOST: rabbitmq
-      RABBITMQ_USER: decoder
-      RABBITMQ_PASSWORD: decoder123
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
       LOGSTASH_HOST: logstash
       LOGSTASH_PORT: 5000
-      JWT_SECRET: decoder-poc-jwt-secret-key-at-least-256-bits-long-for-hs512
+      JWT_SECRET: ${JWT_SECRET}
+      REDIS_HOST: redis
     ports:
       - "8081:8081"
     networks:
@@ -163,6 +190,8 @@ services:
       postgres:
         condition: service_healthy
       rabbitmq:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8081/actuator/health | grep -q UP || exit 1"]
@@ -177,16 +206,16 @@ services:
     container_name: decoder-course
     environment:
       SPRING_PROFILES_ACTIVE: dev
-      SPRING_CONFIG_IMPORT: "configserver:http://config-user:config-pass@config-server:8888"
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://admin:admin123@eureka-server:8761/eureka/
+      SPRING_CONFIG_IMPORT: "configserver:http://${CONFIG_USER}:${CONFIG_PASSWORD}@config-server:8888"
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://${EUREKA_USER}:${EUREKA_PASSWORD}@eureka-server:8761/eureka/
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: course_db
-      DB_USER: decoder
-      DB_PASSWORD: decoder123
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
       RABBITMQ_HOST: rabbitmq
-      RABBITMQ_USER: decoder
-      RABBITMQ_PASSWORD: decoder123
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
       LOGSTASH_HOST: logstash
       LOGSTASH_PORT: 5000
     ports:
@@ -209,16 +238,16 @@ services:
     container_name: decoder-notification
     environment:
       SPRING_PROFILES_ACTIVE: dev
-      SPRING_CONFIG_IMPORT: "configserver:http://config-user:config-pass@config-server:8888"
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://admin:admin123@eureka-server:8761/eureka/
+      SPRING_CONFIG_IMPORT: "configserver:http://${CONFIG_USER}:${CONFIG_PASSWORD}@config-server:8888"
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://${EUREKA_USER}:${EUREKA_PASSWORD}@eureka-server:8761/eureka/
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: notification_db
-      DB_USER: decoder
-      DB_PASSWORD: decoder123
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
       RABBITMQ_HOST: rabbitmq
-      RABBITMQ_USER: decoder
-      RABBITMQ_PASSWORD: decoder123
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
       LOGSTASH_HOST: logstash
       LOGSTASH_PORT: 5000
     ports:
@@ -245,11 +274,12 @@ services:
     container_name: decoder-gateway
     environment:
       SPRING_PROFILES_ACTIVE: dev
-      SPRING_CONFIG_IMPORT: "configserver:http://config-user:config-pass@config-server:8888"
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://admin:admin123@eureka-server:8761/eureka/
-      JWT_SECRET: decoder-poc-jwt-secret-key-at-least-256-bits-long-for-hs512
+      SPRING_CONFIG_IMPORT: "configserver:http://${CONFIG_USER}:${CONFIG_PASSWORD}@config-server:8888"
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://${EUREKA_USER}:${EUREKA_PASSWORD}@eureka-server:8761/eureka/
+      JWT_SECRET: ${JWT_SECRET}
       LOGSTASH_HOST: logstash
       LOGSTASH_PORT: 5000
+      REDIS_HOST: redis
     ports:
       - "8080:8080"
     networks:
@@ -261,8 +291,39 @@ services:
         condition: service_healthy
       notification-service:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q UP || exit 1"]
       interval: 15s
       timeout: 10s
       retries: 5
+
+  # ─── MONITORAMENTO ─────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v3.4.0
+    container_name: decoder-prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    networks:
+      - decoder-net
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=7d
+
+  grafana:
+    image: grafana/grafana:11.6.3
+    container_name: decoder-grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin123
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3000:3000"
+    networks:
+      - decoder-net
+    depends_on:
+      - prometheus

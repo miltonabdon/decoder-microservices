@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  <springProperty scope="context" name="APP_NAME" source="spring.application.name" defaultValue="course-service"/>
+  <springProperty scope="context" name="LOGSTASH_HOST" source="logstash.host" defaultValue="localhost"/>
+  <springProperty scope="context" name="LOGSTASH_PORT" source="logstash.port" defaultValue="5001"/>
+
+  <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{traceId:-},%X{spanId:-}] %logger{36} - %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <appender name="LOGSTASH" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+    <destination>${LOGSTASH_HOST}:${LOGSTASH_PORT}</destination>
+    <reconnectionDelay>5 seconds</reconnectionDelay>
+    <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+      <customFields>{"app_name":"${APP_NAME}","env":"dev"}</customFields>
+      <includeMdcKeyName>traceId</includeMdcKeyName>
+      <includeMdcKeyName>spanId</includeMdcKeyName>
+      <includeCallerData>false</includeCallerData>
+      <throwableConverter class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
+        <maxDepthPerCause>10</maxDepthPerCause>
+        <shortenedClassNameLength>20</shortenedClassNameLength>
+      </throwableConverter>
+    </encoder>
+    <connectionStrategy>
+      <roundRobin>
+        <connectionTTL>5 minutes</connectionTTL>
+      </roundRobin>
+    </connectionStrategy>
+  </appender>
+
+  <root level="INFO">
+    <appender-ref ref="CONSOLE"/>
+    <appender-ref ref="LOGSTASH"/>
+  </root>
+
+  <!-- Reduzir noise de libs internas -->
+  <logger name="com.netflix.eureka" level="WARN"/>
+  <logger name="com.netflix.discovery" level="WARN"/>
+  <logger name="org.springframework.cloud.netflix" level="WARN"/>
+  <logger name="org.hibernate.SQL" level="WARN"/>
+</configuration>

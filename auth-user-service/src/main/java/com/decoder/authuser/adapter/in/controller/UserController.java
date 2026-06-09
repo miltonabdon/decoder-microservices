@@ -2,6 +2,7 @@ package com.decoder.authuser.adapter.in.controller;
 
 import com.decoder.authuser.adapter.in.controller.dto.*;
 import com.decoder.authuser.adapter.in.security.JwtProvider;
+import com.decoder.authuser.adapter.in.security.TokenBlacklistService;
 import com.decoder.authuser.domain.model.UserModel;
 import com.decoder.authuser.domain.service.UserService;
 import jakarta.validation.Valid;
@@ -25,10 +26,25 @@ public class UserController {
     private final UserService userService;
     private final AuthenticationManager authenticationManager;
     private final JwtProvider jwtProvider;
+    private final TokenBlacklistService tokenBlacklistService;
 
     @PostMapping
     public ResponseEntity<UserModel> createUser(@RequestBody @Valid UserRequestDto dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(userService.createUser(dto));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(
+            @RequestHeader("Authorization") String authHeader) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            var token = authHeader.substring(7);
+            if (jwtProvider.validateToken(token)) {
+                var jti = jwtProvider.getJtiFromToken(token);
+                var remainingMs = jwtProvider.getRemainingMs(token);
+                tokenBlacklistService.blacklist(jti, remainingMs);
+            }
+        }
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/login")

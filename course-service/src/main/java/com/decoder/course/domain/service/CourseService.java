@@ -1,5 +1,7 @@
 package com.decoder.course.domain.service;
 
+import com.decoder.course.adapter.in.controller.dto.CourseDetailView;
+import com.decoder.course.adapter.in.controller.dto.CourseListView;
 import com.decoder.course.adapter.in.controller.dto.CourseRequestDto;
 import com.decoder.course.adapter.out.client.AuthUserClient;
 import com.decoder.course.adapter.out.messaging.CourseEventPublisher;
@@ -38,7 +40,14 @@ public class CourseService {
         return courseRepository.save(c);
     }
 
-    public Page<CourseModel> listCourses(Pageable pageable) { return courseRepository.findAll(pageable); }
+    public Page<CourseListView> listCourses(Pageable pageable) {
+        return courseRepository.findAllProjectedBy(pageable);
+    }
+
+    public CourseDetailView getCourseDetail(UUID id) {
+        return courseRepository.findProjectedById(id)
+            .orElseThrow(() -> new NoSuchElementException("Course not found: " + id));
+    }
 
     public CourseModel findById(UUID id) {
         return courseRepository.findById(id).orElseThrow(() -> new NoSuchElementException("Course not found: " + id));

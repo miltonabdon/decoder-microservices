@@ -43,4 +43,13 @@ public class FallbackController {
             "message", "Notification service is temporarily unavailable. Please try again later."
         ));
     }
+
+    @GetMapping("/rate-limit")
+    public ResponseEntity<Map<String, String>> rateLimitFallback() {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(Map.of(
+            "status", "TOO_MANY_REQUESTS",
+            "message", "Rate limit exceeded. Please retry after 60 seconds.",
+            "retryAfter", "60"
+        ));
+    }
 }

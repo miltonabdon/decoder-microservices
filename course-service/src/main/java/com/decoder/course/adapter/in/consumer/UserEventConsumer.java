@@ -3,6 +3,8 @@ package com.decoder.course.adapter.in.consumer;
 import com.decoder.course.adapter.in.consumer.dto.UserEventDto;
 import com.decoder.course.adapter.out.persistence.CourseUserRepository;
 import com.decoder.course.adapter.out.persistence.UserDataRepository;
+import com.decoder.course.adapter.out.persistence.ProcessedEventRepository;
+import com.decoder.course.adapter.out.persistence.ProcessedEvent;
 import com.decoder.course.domain.model.UserDataModel;
 import com.decoder.course.domain.model.UserDataType;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import java.time.LocalDateTime;
 
 @Slf4j
 @Component
@@ -17,16 +20,24 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserEventConsumer {
     private final UserDataRepository userDataRepository;
     private final CourseUserRepository courseUserRepository;
+    private final ProcessedEventRepository processedEventRepository;
 
     @RabbitListener(queues = "${decoder.rabbitmq.queues.users-course}")
     @Transactional
     public void handleUserEvent(UserEventDto event) {
+        if (processedEventRepository.existsById(event.eventId())) {
+            log.warn("Duplicate event skipped: id={} type={}", event.eventId(), event.eventType());
+            return;
+        }
+
         log.info("UserEventConsumer: type={} userId={}", event.eventType(), event.userId());
         switch (event.eventType()) {
             case "USER_CREATED", "USER_UPDATED" -> syncUser(event);
             case "USER_DELETED" -> deleteUser(event);
             default -> log.warn("Unknown event: {}", event.eventType());
         }
+
+        processedEventRepository.save(new ProcessedEvent(event.eventId(), event.eventType(), LocalDateTime.now()));
     }
 
     private void syncUser(UserEventDto e) {

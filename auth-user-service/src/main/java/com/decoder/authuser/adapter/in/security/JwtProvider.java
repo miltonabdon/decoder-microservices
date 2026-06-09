@@ -36,6 +36,7 @@ public class JwtProvider {
             .claim("userType", user.getUserType().name())
             .issuedAt(new Date())
             .expiration(new Date(System.currentTimeMillis() + expirationMs))
+            .id(UUID.randomUUID().toString())
             .signWith(key)
             .compact();
     }
@@ -46,6 +47,16 @@ public class JwtProvider {
 
     public String getRolesFromToken(String token) {
         return getClaims(token).get("roles", String.class);
+    }
+
+    public String getJtiFromToken(String token) {
+        return getClaims(token).getId();
+    }
+
+    public long getRemainingMs(String token) {
+        var exp = getClaims(token).getExpiration();
+        long remaining = exp.getTime() - System.currentTimeMillis();
+        return Math.max(0, remaining);
     }
 
     public boolean validateToken(String token) {

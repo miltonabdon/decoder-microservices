@@ -6,6 +6,11 @@ spring:
       idle-timeout: 30000
       connection-timeout: 20000
       max-lifetime: 1800000
+  data:
+    web:
+      pageable:
+        max-page-size: 100
+        default-page-size: 10
 
 management:
   endpoints:
@@ -17,7 +22,6 @@ management:
       show-details: always
     prometheus:
       enabled: true
-
   tracing:
     sampling:
       probability: 1.0
@@ -28,10 +32,3 @@ management:
 logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
-
-spring:
-  data:
-    web:
-      pageable:
-        max-page-size: 100
-        default-page-size: 10

@@ -41,8 +41,14 @@ public class UserService {
         user.setUserType(dto.userType() != null ? dto.userType() : UserType.STUDENT);
         user.setActive(true);
 
-        var role = roleRepository.findByRoleType(RoleType.ROLE_STUDENT)
-            .orElseThrow(() -> new IllegalStateException("Default role not found — run Flyway migrations"));
+        var userType = user.getUserType();
+        var roleType = switch (userType) {
+            case INSTRUCTOR -> RoleType.ROLE_INSTRUCTOR;
+            case ADMIN -> RoleType.ROLE_ADMIN;
+            default -> RoleType.ROLE_STUDENT;
+        };
+        var role = roleRepository.findByRoleType(roleType)
+            .orElseThrow(() -> new IllegalStateException("Role not found for type: " + roleType));
         user.setRoles(Set.of(role));
 
         var saved = userRepository.save(user);

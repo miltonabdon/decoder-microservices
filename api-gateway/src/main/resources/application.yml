@@ -5,4 +5,40 @@ spring:
     import: "optional:configserver:"
   cloud:
     config:
+      uri: ${SPRING_CLOUD_CONFIG_URI:http://localhost:8888}
       fail-fast: false
+    gateway:
+      routes:
+        - id: auth-user-route
+          uri: lb://auth-user-service
+          predicates:
+            - Path=/auth/users/**,/auth/users
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: auth-user-cb
+                fallbackUri: forward:/fallback/auth
+
+        - id: course-route
+          uri: lb://course-service
+          predicates:
+            - Path=/api/courses/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: course-cb
+                fallbackUri: forward:/fallback/courses
+
+        - id: notification-route
+          uri: lb://notification-service
+          predicates:
+            - Path=/api/notifications/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: notification-cb
+                fallbackUri: forward:/fallback/notifications
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true

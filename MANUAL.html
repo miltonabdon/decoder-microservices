@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Decoder Microservices — Manual Interativo</title>
+<style>
+:root {
+  --bg: #0f1117;
+  --bg2: #1a1d27;
+  --bg3: #22263a;
+  --border: #2e3350;
+  --accent: #7c6af7;
+  --accent2: #56cfb8;
+  --accent3: #f7c56c;
+  --danger: #f76c6c;
+  --text: #e2e8f0;
+  --muted: #8892a4;
+  --code-bg: #161b2e;
+  --success: #4ade80;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.6; }
+
+/* NAV */
+nav { position: fixed; top: 0; left: 0; width: 260px; height: 100vh; background: var(--bg2); border-right: 1px solid var(--border); overflow-y: auto; z-index: 100; padding: 20px 0; }
+nav h2 { color: var(--accent); font-size: 13px; text-transform: uppercase; letter-spacing: 2px; padding: 0 20px 12px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+nav a { display: flex; align-items: center; gap: 8px; padding: 7px 20px; color: var(--muted); text-decoration: none; font-size: 13px; transition: all .15s; border-left: 2px solid transparent; }
+nav a:hover, nav a.active { color: var(--text); background: var(--bg3); border-left-color: var(--accent); }
+nav a .badge { background: var(--bg3); color: var(--accent2); font-size: 10px; padding: 1px 6px; border-radius: 10px; margin-left: auto; }
+nav a.done .badge { background: #14532d; color: var(--success); }
+
+/* MAIN */
+main { margin-left: 260px; padding: 40px; max-width: 1000px; }
+section { margin-bottom: 80px; scroll-margin-top: 30px; }
+h1 { font-size: 28px; color: var(--text); margin-bottom: 6px; }
+h1 span { color: var(--accent); }
+.subtitle { color: var(--muted); font-size: 14px; margin-bottom: 32px; }
+h2 { font-size: 22px; color: var(--text); margin: 36px 0 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+h3 { font-size: 16px; color: var(--accent2); margin: 24px 0 8px; }
+p { color: var(--muted); margin-bottom: 12px; }
+strong { color: var(--text); }
+
+/* PROGRESS BAR */
+.progress-bar { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; margin-bottom: 40px; }
+.progress-bar h3 { color: var(--text); font-size: 14px; margin: 0 0 10px; }
+.bar-track { background: var(--bg3); border-radius: 6px; height: 8px; overflow: hidden; }
+.bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 6px; transition: width .4s ease; }
+.bar-label { color: var(--muted); font-size: 12px; margin-top: 6px; }
+
+/* FEYNMAN BOX */
+.feynman { background: linear-gradient(135deg, #1e1b4b, #1a1d27); border: 1px solid #4338ca55; border-left: 3px solid var(--accent); border-radius: 8px; padding: 16px 20px; margin: 20px 0; }
+.feynman-title { color: var(--accent); font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
+.feynman p { color: #c7d2fe; margin: 0; font-size: 14px; }
+
+/* DIAGRAM */
+.diagram { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin: 16px 0; font-family: 'Courier New', monospace; font-size: 13px; color: var(--accent2); overflow-x: auto; white-space: pre; line-height: 1.5; }
+
+/* CODE BLOCK */
+.code-block { position: relative; background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; margin: 16px 0; }
+.code-block .label { color: var(--muted); font-size: 11px; padding: 8px 16px 0; text-transform: uppercase; letter-spacing: 1px; }
+.code-block pre { padding: 12px 16px 16px; font-family: 'Courier New', monospace; font-size: 13px; color: #a5f3fc; overflow-x: auto; }
+.code-block .copy-btn { position: absolute; top: 8px; right: 10px; background: var(--bg3); border: 1px solid var(--border); color: var(--muted); padding: 4px 10px; font-size: 11px; border-radius: 4px; cursor: pointer; transition: all .15s; }
+.code-block .copy-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
+.code-block .copy-btn.copied { background: #14532d; color: var(--success); border-color: var(--success); }
+
+/* SQL BLOCK */
+.sql-block { background: var(--code-bg); border: 1px solid #854d0e44; border-left: 3px solid var(--accent3); border-radius: 8px; padding: 16px; margin: 16px 0; }
+.sql-block .sql-label { color: var(--accent3); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+.sql-block pre { font-family: 'Courier New', monospace; font-size: 13px; color: #fde68a; overflow-x: auto; }
+
+/* PATTERN CARD */
+.pattern-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 24px; margin: 20px 0; }
+.pattern-num { display: inline-block; background: var(--accent); color: white; font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 4px; margin-bottom: 10px; }
+.pattern-card h3 { color: var(--text); font-size: 18px; margin: 0 0 8px; }
+.pattern-card .where { color: var(--accent2); font-size: 12px; margin-bottom: 12px; }
+
+/* STEP LIST */
+.steps { list-style: none; counter-reset: step; }
+.steps li { counter-increment: step; padding: 8px 0 8px 44px; position: relative; color: var(--muted); border-bottom: 1px solid var(--border); font-size: 14px; }
+.steps li:last-child { border-bottom: none; }
+.steps li::before { content: counter(step); position: absolute; left: 0; top: 8px; background: var(--accent); color: white; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; }
+
+/* CALLOUT */
+.callout { background: var(--bg3); border-left: 3px solid var(--accent3); padding: 12px 16px; border-radius: 0 6px 6px 0; margin: 12px 0; font-size: 13px; color: #fde68a; }
+.callout.danger { border-left-color: var(--danger); color: #fca5a5; background: #1f0f0f; }
+.callout.success { border-left-color: var(--success); color: #86efac; background: #0f1f0f; }
+
+/* QUIZ */
+.quiz-q { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin: 16px 0; }
+.quiz-q .q-text { color: var(--text); font-size: 15px; margin-bottom: 14px; }
+.quiz-q label { display: flex; align-items: flex-start; gap: 10px; padding: 8px 12px; border-radius: 6px; cursor: pointer; color: var(--muted); font-size: 14px; transition: background .15s; border: 1px solid transparent; margin-bottom: 4px; }
+.quiz-q label:hover { background: var(--bg3); }
+.quiz-q input[type=radio] { margin-top: 3px; accent-color: var(--accent); }
+.quiz-q label.correct { background: #14532d; border-color: var(--success); color: var(--success); }
+.quiz-q label.wrong { background: #3b0f0f; border-color: var(--danger); color: var(--danger); }
+.quiz-result { background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 24px; text-align: center; margin-top: 20px; display: none; }
+.quiz-score { font-size: 48px; font-weight: bold; color: var(--accent); }
+.quiz-msg { color: var(--muted); margin-top: 8px; }
+.btn { display: inline-block; background: var(--accent); color: white; border: none; padding: 10px 24px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; transition: opacity .15s; }
+.btn:hover { opacity: .85; }
+.btn-outline { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
+
+/* TABLE */
+table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
+th { background: var(--bg3); color: var(--accent); text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+td { padding: 9px 12px; border-bottom: 1px solid var(--border); color: var(--muted); vertical-align: top; }
+tr:hover td { background: var(--bg3); }
+
+/* CHIP */
+.chip { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 500; margin: 2px; }
+.chip-blue { background: #1e3a5f; color: #7dd3fc; }
+.chip-green { background: #14532d; color: #86efac; }
+.chip-purple { background: #2e1065; color: #c4b5fd; }
+.chip-yellow { background: #422006; color: #fde68a; }
+
+/* RESPONSIVE */
+@media (max-width: 900px) {
+  nav { display: none; }
+  main { margin-left: 0; padding: 20px; }
+}
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<nav id="sidebar">
+  <h2>Decoder POC</h2>
+  <a href="#intro">🏠 Introdução</a>
+  <a href="#stack">⚙️ Stack & Portas</a>
+  <a href="#p1">① Service Registry<span class="badge">Eureka</span></a>
+  <a href="#p2">② API Gateway<span class="badge">SCG</span></a>
+  <a href="#p3">③ Circuit Breaker<span class="badge">R4j</span></a>
+  <a href="#p4">④ Global Config<span class="badge">SCC</span></a>
+  <a href="#p5">⑤ Saga Coreografia<span class="badge">Events</span></a>
+  <a href="#p6">⑥ Saga Orquestração<span class="badge">Orch</span></a>
+  <a href="#p7">⑦ Event Notification<span class="badge">MQ</span></a>
+  <a href="#p8">⑧ ECST<span class="badge">State</span></a>
+  <a href="#p9">⑨ API Composition<span class="badge">Feign</span></a>
+  <a href="#p10">⑩ Log Aggregation<span class="badge">ELK</span></a>
+  <a href="#jwt">🔐 JWT + Blacklist</a>
+  <a href="#outbox">📤 Transactional Outbox</a>
+  <a href="#idempotency">🔁 Idempotência</a>
+  <a href="#cqrs">📊 CQRS Light</a>
+  <a href="#ratelimit">🚦 Rate Limiting</a>
+  <a href="#tracing">🔭 Distributed Tracing</a>
+  <a href="#demo">🎬 Demo End-to-End</a>
+  <a href="#quiz">🧠 Quiz Final</a>
+</nav>
+
+<main>
+
+<!-- INTRO -->
+<section id="intro">
+  <h1><span>Decoder</span> Microservices POC</h1>
+  <p class="subtitle">Manual interativo — Java 26 + Spring Boot 4.0.6 + Spring Cloud 2025.1.1 (Oakwood)</p>
+
+  <div class="progress-bar">
+    <h3>Progresso de Estudo</h3>
+    <div class="bar-track"><div class="bar-fill" id="progressFill" style="width:0%"></div></div>
+    <div class="bar-label" id="progressLabel">0 de 16 tópicos visitados</div>
+  </div>
+
+  <div class="feynman">
+    <div class="feynman-title">💡 Feynman — Por que esta POC existe?</div>
+    <p>Você aprende arquitetura distribuída ao <strong>ver o sistema funcionar e quebrá-lo de propósito</strong>. Esta POC reproduz os 10 padrões do curso Decoder em código real e executável. Cada seção traz: o conceito, por que existe, onde está no código, e como provar que funciona com um comando curl.</p>
+  </div>
+</section>
+
+<!-- STACK -->
+<section id="stack">
+  <h2>Stack & Portas</h2>
+
+  <table>
+    <tr><th>Serviço</th><th>Porta</th><th>URL</th><th>Função</th></tr>
+    <tr><td>API Gateway</td><td>8080</td><td><a href="http://localhost:8080" target="_blank" style="color:var(--accent)">:8080</a></td><td>Ponto único de entrada — JWT, Circuit Breaker, Rate Limit</td></tr>
+    <tr><td>auth-user-service</td><td>8081</td><td>:8081</td><td>Registro, login, JWT, gerenciamento de usuários</td></tr>
+    <tr><td>course-service</td><td>8082</td><td>:8082</td><td>Cursos, módulos, aulas, matrículas</td></tr>
+    <tr><td>notification-service</td><td>8083</td><td>:8083</td><td>Notificações via eventos assíncronos</td></tr>
+    <tr><td>Eureka Server</td><td>8761</td><td><a href="http://localhost:8761" target="_blank" style="color:var(--accent)">:8761</a></td><td>Service Registry — descobre e monitora serviços</td></tr>
+    <tr><td>Config Server</td><td>8888</td><td>:8888</td><td>Configuração centralizada por serviço e perfil</td></tr>
+    <tr><td>RabbitMQ</td><td>15672</td><td><a href="http://localhost:15672" target="_blank" style="color:var(--accent)">:15672</a></td><td>Message broker — eventos e comandos assíncronos (guest/guest)</td></tr>
+    <tr><td>Kibana</td><td>5602</td><td><a href="http://localhost:5602" target="_blank" style="color:var(--accent)">:5602</a></td><td>Visualização de logs centralizados (ELK)</td></tr>
+    <tr><td>Elasticsearch</td><td>9201</td><td>:9201</td><td>Storage de logs indexados</td></tr>
+    <tr><td>Zipkin</td><td>9411</td><td><a href="http://localhost:9411" target="_blank" style="color:var(--accent)">:9411</a></td><td>Distributed tracing — rastreia chamadas entre serviços</td></tr>
+    <tr><td>Prometheus</td><td>9090</td><td><a href="http://localhost:9090" target="_blank" style="color:var(--accent)">:9090</a></td><td>Coleta métricas dos serviços via /actuator/prometheus</td></tr>
+    <tr><td>Grafana</td><td>3000</td><td><a href="http://localhost:3000" target="_blank" style="color:var(--accent)">:3000</a></td><td>Dashboards de métricas (admin/admin)</td></tr>
+  </table>
+
+  <div class="callout">
+    <strong>Subir tudo:</strong> cd decoder-poc && docker compose up -d
+    — aguarde ~3 minutos para todos os healthchecks passarem.
+  </div>
+</section>
+
+<!-- P1: SERVICE REGISTRY -->
+<section id="p1">
+  <h2>① Service Registry — Eureka</h2>
+  <span class="chip chip-purple">Padrão #1 do curso</span>
+  <span class="chip chip-blue">eureka-server:8761</span>
+
+  <div class="feynman">
+    <div class="feynman-title">💡 Feynman</div>
+    <p>Imagine uma lista telefônica automática. Cada serviço ao subir <strong>liga para o Eureka e diz "estou aqui, meu endereço é X"</strong>. Quando o Gateway precisa chamar o course-service, pergunta ao Eureka "onde está o course-service?" em vez de ter o IP hardcoded. Se o serviço cair, o Eureka remove da lista em ~90s (heartbeat timeout).</p>
+  </div>
+
+  <div class="diagram">
+  ┌─────────────────────────────────────────────────┐
+  │              EUREKA SERVER :8761                │
+  │  ┌─────────────────────────────────────────┐   │
+  │  │  Registro Ativo                         │   │
+  │  │  AUTH-USER-SERVICE  → 10.0.0.2:8081  ✓ │   │
+  │  │  COURSE-SERVICE     → 10.0.0.3:8082  ✓ │   │
+  │  │  NOTIFICATION-SVC   → 10.0.0.4:8083  ✓ │   │
+  │  │  API-GATEWAY        → 10.0.0.5:8080  ✓ │   │
+  │  │  CONFIG-SERVER      → 10.0.0.6:8888  ✓ │   │
+  │  └─────────────────────────────────────────┘   │
+  └─────────────────────────────────────────────────┘
+        ↑ heartbeat a cada 30s     ↑ discovery
+        │                          │
+  [Serviços]  ──register──→  [Eureka]  ←──query──  [Gateway]</div>
+
+  <h3>Onde está no código</h3>
+  <p>Arquivo: <code style="color:var(--accent2)">eureka-server/src/main/resources/application.yml</code></p>
+  <p>Clientes: todos os serviços têm <code style="color:var(--accent2)">spring-cloud-starter-netflix-eureka-client</code> e <code style="color:var(--accent2)">eureka.client.service-url.defaultZone</code> nos configs do Config Server.</p>
+
+  <h3>Como validar</h3>
+  <div class="code-block">
+    <span class="label">bash — abrir dashboard Eureka</span>
+    <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+    <pre>open http://localhost:8761
+# Deve mostrar 5 instâncias registradas em "Instances currently registered with Eureka"</pre>
+  </div>
+
+  <div class="code-block">
+    <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+    <pre>curl -s http://localhost:8761/eureka/apps | python3 -m json.tool | grep instanceId</pre>
+  </div>
+
+  <div class="callout success">Esperado: 5 linhas com instanceId de cada serviço</div>
+
+  <h3>Por que self-preservation está desabilitado nesta POC</h3>
+  <p>Com <code style="color:var(--accent2)">enable-self-preservation: false</code>, o Eureka remove instâncias que param de enviar heartbeat imediatamente. Em produção isso fica habilitado para tolerar picos de rede — mas em POC local provoca o banner EMERGENCY confuso.</p>
+</section>
+
+<!-- P2: API GATEWAY -->
+<section id="p2">
+  <h2>② API Gateway — Spring Cloud Gateway</h2>
+  <span class="chip chip-purple">Padrão #2 do curso</span>
+  <span class="chip chip-blue">api-gateway:8080</span>
+
+  <div class="feynman">
+    <div class="feynman-title">💡 Feynman</div>
+    <p>O Gateway é o <strong>segurança e recepcionista do prédio</strong>. Todo visitante (request) passa por ele. Ele valida o crachá (JWT), decide para qual andar (serviço) encaminhar, pode bloquear se o andar estiver sobrecarregado (Circuit Breaker) e conta quantas pessoas entram por minuto (Rate Limiter). Nenhum serviço interno precisa se preocupar com quem está chamando.</p>
+  </div>
+
+  <div class="diagram">
+  Cliente HTTP
+       │
+       ▼
+  ┌────────────────────────────────────────────────┐
+  │            API GATEWAY :8080                   │
+  │                                                │
+  │  GlobalFilter: JwtAuthenticationFilter         │
+  │    ├─ Valida JWT (sem chamar auth-user)         │
+  │    ├─ Checa blacklist no Redis                  │
+  │    └─ Injeta X-User-Id, X-User-Roles headers   │
+  │                                                │
+  │  Rotas (Spring Cloud Gateway DSL):             │
+  │    /auth/**  ──lb://AUTH-USER-SERVICE──→ :8081 │
+  │    /api/courses/**  ──lb://COURSE──────→ :8082 │
+  │    /api/notifications/**  ──lb://NOTIF─→ :8083 │
+  │                                                │
+  │  Filters por rota:                             │
+  │    CircuitBreaker (Resilience4j)               │
+  │    RequestRateLimiter (Redis Token Bucket)     │
+  └────────────────────────────────────────────────┘</div>
+
+  <h3>Rotas configuradas</h3>
+  <table>
+    <tr><th>Prefixo</th><th>Destino</th><th>Strip Prefix</th></tr>
+    <tr><td>/auth/**</td><td>lb://AUTH-USER-SERVICE</td><td>Não — mantém /auth/users/...</td></tr>
+    <tr><td>/api/courses/**</td><td>lb://COURSE-SERVICE</td><td>Sim — remove /api</td></tr>
+    <tr><td>/api/notifications/**</td><td>lb://NOTIFICATION-SERVICE</td><td>Sim — remove /api</td></tr>
+    <tr><td>/fallback/**</td><td>GatewayFallbackController</td><td>Circuit Breaker fallback</td></tr>
+  </table>
+
+  <h3>Como validar o roteamento</h3>
+  <div class="code-block">
+    <span class="label">bash — rota pública (sem JWT)</span>
+    <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+    <pre>curl -s -X POST http://localhost:8080/auth/users \
+  -H "Content-Type: application/json" \
+  -d '{"username":"testuser","email":"test@test.com","password":"Test@1234","fullName":"Test User"}' | python3 -m json.tool</pre>
+  </div>
+
+  <div class="code-block">
+    <span class="label">bash — rota protegida sem JWT → 401</span>
+    <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+    <pre>curl -sv http://localhost:8080/api/courses 2>&1 | grep "< HTTP"
+# Esperado: 401 Unauthorized</pre>
+  </div>
+</section>
+
+<!-- P3: CIRCUIT BREAKER -->
+<section id="p3">
+  <h2>③ Circuit Breaker — Resilience4j</h2>
+  <span class="chip chip-purple">Padrão #3 do curso</span>
+  <span class="chip chip-blue">api-gateway + course-service</span>
+
+  <div class="feynman">
+    <div class="feynman-title">💡 Feynman</div>
+    <p>O disjuntor elétrico da sua casa: quando um aparelho começa a dar curto, o disjuntor <strong>desliga o circuito</strong> para proteger o resto. Em microsserviços, se o auth-user-service está respondendo em 10 segundos, o Circuit Breaker "abre" e retorna uma resposta de fallback imediatamente, sem fazer o cliente esperar — e sem derrubar o Gateway.</p>
+  </div>
+
+  <div class="diagram">
+  Estado FECHADO (normal):
+  Gateway ──→ auth-user-service ──→ resposta OK
+
+  Estado ABERTO (falhas ≥ 50% em sliding window de 10):
+  Gateway ──→ [CB ABERTO] ──→ fallback imediato (503 + mensagem)
+                ↑
+       Não chama o serviço!
+       Espera 30s (waitDurationInOpenState)
+       Tenta Half-Open: 1 chamada de teste
+       Se OK → fecha. Se falha → abre novamente.</div>
+
+  <h3>Configuração no Gateway</h3>
+  <div class="code-block">
+    <span class="label">yaml — config-repo/api-gateway-dev.yml</span>
+    <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+    <pre>resilience4j.circuitbreaker:
+  instances:
+    authServiceCB:
+      slidingWindowSize: 10
+      failureRateThreshold: 50
+      waitDurationInOpenState: 30s
+      permittedNumberOfCallsInHalfOpenState: 3</pre>
+  </div>
+
+  <h3>Como forçar o Circuit Breaker a abrir</h3>
+  <div class="code-block">
+    <span class="label">bash — parar auth-user e chamar rota protegida</span>
+    <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+    <pre># 1. Para o auth-user (simula falha)
+docker compose stop auth-user-service
+
+# 2. Chama rota que depende de auth → deve retornar 503 + fallback
+TOKEN="seu_jwt_aqui"
+for i in {1..12}; do
+  curl -s -H "Authorization: Bearer $TOKEN" http://localhost:8080/auth/users | head -c 100
+  echo ""
+done
+
+# 3. Sobe o serviço de volta
+docker compose start auth-user-service</pre>
+  </div>
+
+  <h3>Verificar estado do Circuit Breaker</h3>
+  <div class="code-block">
+    <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+    <pre>curl -s http://localhost:8080/actuator/circuitbreakers | python3 -m json.tool
+# Veja o campo "state": OPEN / CLOSED / HALF_OPEN</pre>
+  </div>
+</section>
+
+<!-- P4: CONFIG SERVER -->
+<section id="p4">
+  <h2>④ Global Config — Spring Cloud Config</h2>
+  <span class="chip chip-purple">Padrão #4 do curso</span>
+  <span class="chip chip-blue">config-server:8888</span>
+
+  <div class="feynman">
+    <div class="feynman-title">💡 Feynman</div>
+    <p>Em vez de cada serviço ter sua própria lista de configurações espalhadas em arquivos diferentes, <strong>existe um servidor central que guarda tudo</strong>. Na inicialização, cada serviço pergunta ao Config Server "quais são minhas configurações para o perfil dev?". Isso permite mudar uma URL de banco de dados ou um timeout em um lugar só — sem redeployar nada.</p>
+  </div>
+
+  <div class="diagram">
+  ┌─────────────────────────────────────────┐
+  │         CONFIG SERVER :8888             │
+  │                                         │
+  │  Lê de: /config-repo/ (filesystem)     │
+  │                                         │
+  │  Arquivos:                              │
+  │  ├─ application.yml (todos os svcs)     │
+  │  ├─ auth-user-service-dev.yml          │
+  │  ├─ course-service-dev.yml             │
+  │  ├─ notification-service-dev.yml       │
+  │  └─ api-gateway-dev.yml                │
+  └─────────────────────────────────────────┘
+          ↑ na inicialização, cada serviço
+          busca suas configs antes de subir</div>
+
+  <h3>Convenção de nomenclatura — crítica</h3>
+  <p>O Config Server resolve arquivos como <code style="color:var(--accent3)">{spring.application.name}-{profile}.yml</code>. Se o serviço se chama <code>auth-user-service</code> e o perfil é <code>dev</code>, o arquivo precisa ser <code>auth-user-service-dev.yml</code> — não <code>auth-user-dev.yml</code>.</p>
+
+  <h3>Como validar</h3>
+  <div class="code-block">
+    <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+    <pre>curl -s http://localhost:8888/auth-user-service/dev | python3 -m json.tool
+# Retorna todas as propriedades que o auth-user-service recebe no perfil dev</pre>
+  </div>
+
+  <div class="code-block">
+    <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+    <pre>curl -s http://localhost:8888/course-service/dev | python3 -m json.tool</pre>
+  </div>
+
+  <div class="sql-block">
+    <div class="sql-label">SQL — verificar qual datasource o serviço usa</div>
+    <pre>-- Executar no container do auth-user postgres
+docker exec -it decoder-poc-postgres-1 psql -U authuser -d authuser_db -c "\conninfo"</pre>
+  </div>
+</section>
+
+<!-- P5: SAGA COREOGRAFIA -->
+<section id="p5">
+  <h2>⑤ Saga por Coreografia — Matrícula em Curso</h2>
+  <span class="chip chip-purple">Padrão #5 do curso</span>
+  <span class="chip chip-blue">course-service → RabbitMQ → notification-service</span>
+
+  <div class="feynman">
+    <div class="feynman-title">💡 Feynman</div>
+    <p>Em uma dança coreografada, <strong>cada dançarino sabe sua parte e reage ao que o anterior fez</strong> — sem um diretor no palco. Na Saga Coreografia, cada serviço publica um evento quando termina sua parte, e o próximo serviço na cadeia consome esse evento e faz a sua parte. Não há orquestrador central.</p>
+  </div>
+
+  <div class="diagram">
+  Usuário
+    │  POST /api/courses/{id}/enrollments
+    ▼
+  course-service
+    │  1. Cria CourseUser (matrícula) no banco
+    │  2. Publica: enrollment.created → ms.courses.exchange
+    ▼
+  RabbitMQ (Topic Exchange)
+    │  routing key: enrollment.created
+    ▼
+  notification-service
+    │  3. Consome evento
+    │  4. Cria Notification no banco
+    │  5. Publica: notification.sent → ms.notification.commands.exchange
+    ▼
+  (course-service pode consumir confirmação se necessário)</div>
+
+  <h3>Rollback (compensação)</h3>
+  <p>Se a notification-service falhar 3 vezes (DLQ), a matrícula fica criada mas sem notificação. Em produção: implementar Consumer que lê a DLQ e publica <code style="color:var(--danger)">enrollment.notification.failed</code>, que o course-service consome para marcar a matrícula como <code>NOTIFICATION_PENDING</code>.</p>
+
+  <h3>Como validar</h3>
+  <div class="code-block">
+    <span class="label">bash — fluxo completo de matrícula</span>
+    <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+    <pre># 1. Login (pegar JWT)
+TOKEN=$(curl -s -X POST http://localhost:8080/auth/users/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"testuser","password":"Test@1234"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
+
+# 2. Criar curso
+COURSE_ID=$(curl -s -X POST http://localhost:8080/api/courses \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"name":"Spring Boot Avançado","description":"Curso completo","courseStatus":"ACTIVE","courseLevel":"ADVANCED","coursePrice":0.0}' | python3 -c "import sys,json; print(json.load(sys.stdin)['courseId'])")
+
+echo "Course ID: $COURSE_ID"
+
+# 3. Matricular usuário no curso
+curl -s -X POST "http://localhost:8080/api/courses/$COURSE_ID/enrollments" \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool</pre>
+  </div>
+
+  <div class="code-block">
+    <span class="label">bash — verificar notificação criada pelo evento</span>
+    <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+    <pre>curl -s http://localhost:8080/api/notifications \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool</pre>
+  </div>
+
+  <div class="callout">
+    No RabbitMQ Management (<a href="http://localhost:15672" style="color:var(--accent3)">:15672</a>) → queues, veja <code>ms.notificationservice.enrollments.exchange</code> — o contador de mensagens processadas deve subir.
+  </div>
+</section>
+
+<!-- P6: SAGA ORQUESTRAÇÃO -->
+<section id="p6">
+  <h2>⑥ Saga por Orquestração — Deleção de Usuário</h2>
+  <span class="chip chip-purple">Padrão #6 do curso</span>
+  <span class="chip chip-blue">auth-user-service (orquestrador)</span>
+
+  <div class="feynman">
+    <div class="feynman-title">💡 Feynman</div>
+    <p>Agora existe um <strong>maestro que coordena a orquestra</strong>. O auth-user-service sabe a sequência completa de passos para deletar um usuário e coordena cada serviço ativamente, aguardando confirmações. Se um passo falhar, o orquestrador aciona compensações em ordem reversa.</p>
+  </div>
+
+  <div class="diagram">
+  DELETE /auth/users/{id}
+         │
+         ▼
+  ┌─────────────────────────────────────────┐
+  │  auth-user-service (ORQUESTRADOR)       │
+  │                                         │
+  │  Step 1: Publica user.deleted           │
+  │     → course-service consome            │
+  │     → deleta enrollments do usuário     │
+  │     → publica enrollments.cleared       │
+  │                                         │
+  │  Step 2: Aguarda enrollments.cleared    │
+  │     → notification-service consome      │
+  │     → deleta notifications do usuário   │
+  │     → publica notifications.cleared     │
+  │                                         │
+  │  Step 3: Deleta usuário do banco        │
+  └─────────────────────────────────────────┘</div>
+
+  <h3>Como validar</h3>
+  <div class="code-block">
+    <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+    <pre># Deletar usuário (aciona saga orquestrada)
+USER_ID="uuid-do-usuario"
+curl -s -X DELETE "http://localhost:8080/auth/users/$USER_ID" \
+  -H "Authorization: Bearer $TOKEN" -v
+
+# Verificar que matrículas foram removidas no course-service
+curl -s "http://localhost:8080/api/courses/$COURSE_ID/enrollments" \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool</pre>
+  </div>
+
+  <h3>Diferença Coreografia vs Orquestração</h3>
+  <table>
+    <tr><th>Aspecto</th><th>Coreografia</th><th>Orquestração</th></tr>
+    <tr><td>Controle</td><td>Descentralizado — cada serviço sabe sua parte</td><td>Centralizado — orquestrador comanda</td></tr>
+    <tr><td>Acoplamento</td><td>Só via eventos (baixo)</td><td>Orquestrador conhece os participantes</td></tr>
+    <tr><td>Observabilidade</td><td>Difícil — fluxo implícito</td><td>Fácil — fluxo visível no orquestrador</td></tr>
+    <tr><td>Quando usar</td><td>Fluxos simples, poucos serviços</td><td>Fluxos complexos, compensações múltiplas</td></tr>
+  </table>
+</section>
+
+<!-- P7: EVENT NOTIFICATION -->
+<section id="p7">
+  <h2>⑦ Event Notification — UserCreated → Notification</h2>
+  <span class="chip chip-purple">Padrão #7 do curso</span>
+  <span class="chip chip-blue">auth-user → RabbitMQ → notification-service</span>
+
+  <div class="feynman">
+    <div class="feynman-title">💡 Feynman</div>
+    <p>Event Notification é o padrão mais simples de mensageria: um serviço <strong>anuncia que algo aconteceu</strong>, sem saber quem vai ouvir ou o que vai fazer. É como um comunicado na empresa: "Novo colaborador contratado!" — o RH, TI e facilities cada um faz sua parte sem o gerente precisar chamar cada um.</p>
+  </div>
+
+  <div class="diagram">
+  auth-user-service
+    │  POST /auth/users → cria usuário
+    │  Publica: user.created
+    │  Payload: { userId, username, email, fullName }  ← mínimo necessário
+    ▼
+  RabbitMQ ms.users.exchange (Topic)
+    │
+    ├─→ ms.notificationservice.users.exchange
+    │      notification-service consome
+    │      Cria: "Bem-vindo, {username}! Sua conta foi criada."
+    │
+    └─→ ms.courseservice.users.exchange
+           course-service consome
+           Replica UserData local (padrão ECST — próxima seção)</div>
+
+  <h3>Como validar</h3>
+  <div class="code-block">
+    <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+    <pre># 1. Criar usuário
+curl -s -X POST http://localhost:8080/auth/users \
+  -H "Content-Type: application/json" \
+  -d '{"username":"novousuario","email":"novo@test.com","password":"Test@1234","fullName":"Novo Usuario"}' | python3 -m json.tool
+
+# 2. Login com novo usuário
+TOKEN2=$(curl -s -X POST http://localhost:8080/auth/users/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"novousuario","password":"Test@1234"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
+
+# 3. Verificar notificação de boas-vindas
+curl -s http://localhost:8080/api/notifications \
+  -H "Authorization: Bearer $TOKEN2" | python3 -m json.tool</pre>
+  </div>
+</section>
+
+<!-- P8: ECST -->
+<section id="p8">
+  <h2>⑧ Event-Carried State Transfer — Réplica de UserData</h2>
+  <span class="chip chip-purple">Padrão #8 do curso</span>
+  <span class="chip chip-blue">auth-user → course-service (replica local)</span>
+
+  <div class="feynman">
+    <div class="feynman-title">💡 Feynman</div>
+    <p>Em vez de course-service chamar auth-user toda vez que precisa do nome do usuário, ele <strong>guarda uma cópia local</strong> do que precisa. Quando um usuário é criado ou atualizado, o evento carrega o estado completo (<em>state transfer</em>), não só "algo mudou". O course-service consome e atualiza sua tabela local <code>user_data</code>. Tradeoff: dado pode ficar brevemente desatualizado (eventual consistency).</p>
+  </div>
+
+  <div class="diagram">
+  auth-user-service                course-service
+  ──────────────────────           ──────────────────────
+  UserModel (source of truth)      UserData (réplica local)
+  ├── userId                       ├── userId (FK implícita)
+  ├── username          ──sync──→  ├── username
+  ├── email                        ├── email
+  └── fullName                     └── fullName
+
+  Sincronização via evento user.created / user.updated
+  Eventual consistency — máximo lag = tempo de processamento da fila</div>
+
+  <h3>Código chave</h3>
+  <div class="code-block">
+    <span class="label">java — UserEventConsumer.java (course-service)</span>
+    <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+    <pre>@RabbitListener(queues = "#{@courseUsersQueue.name}")
+public void consumeUserCreated(UserEventDto event) {
+    if (processedEventRepo.existsByEventId(event.eventId())) return; // idempotência
+    var userData = new UserData(event.userId(), event.username(), event.email(), event.fullName());
+    userDataRepository.save(userData);
+    processedEventRepo.save(new ProcessedEvent(event.eventId()));
+}</pre>
+  </div>
+
+  <h3>Verificar réplica no banco</h3>
+  <div class="sql-block">
+    <div class="sql-label">SQL — course-service: verificar user_data replicada</div>
+    <pre>docker exec -it decoder-poc-postgres-1 psql -U courseuser -d course_db \
+  -c "SELECT user_id, username, email FROM user_data ORDER BY created_at DESC LIMIT 5;"</pre>
+  </div>
+</section>
+
+<!-- P9: API COMPOSITION -->
+<section id="p9">
+  <h2>⑨ API Composition — Feign Client</h2>
+  <span class="chip chip-purple">Padrão #9 do curso</span>
+  <span class="chip chip-blue">course-service → auth-user-service via Feign</span>
+
+  <div class="feynman">
+    <div class="feynman-title">💡 Feynman</div>
+    <p>API Composition é o padrão onde um serviço <strong>agrega dados de outros serviços em uma única resposta</strong>. O course-service precisa mostrar dados do usuário junto com a matrícula — em vez de deixar o frontend fazer duas chamadas, o course-service chama o auth-user internamente via Feign (HTTP declarativo) e monta a resposta composta.</p>
+  </div>
+
+  <div class="diagram">
+  Frontend: GET /api/courses/{courseId}/enrollments/{userId}
+                │
+                ▼
+       course-service
+        │    Busca CourseUser no banco local
+        │    Precisa do nome/email do usuário?
+        ▼
+  Feign Client → auth-user-service
+  GET /auth/users/{userId}
+        │
+        ▼
+  course-service monta resposta composta:
+  { enrollment, courseName, userId, username, email }</div>
+
+  <h3>Feign + Circuit Breaker</h3>
+  <div class="code-block">
+    <span class="label">java — CourseUserFeignClient.java</span>
+    <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+    <pre>@FeignClient(
+    name = "AUTH-USER-SERVICE",       // nome no Eureka — sem IP hardcoded
+    fallback = AuthUserFallback.class  // fallback quando CB abre
+)
+public interface CourseUserFeignClient {
+    @GetMapping("/auth/users/{userId}")
+    UserDataDto getUserById(@PathVariable("userId") UUID userId);
+}</pre>
+  </div>
+
+  <h3>Como validar</h3>
+  <div class="code-block">
+    <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+    <pre>curl -s "http://localhost:8080/api/courses/$COURSE_ID/enrollments" \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+# Response inclui dados do usuário agregados do auth-user-service</pre>
+  </div>
+</section>
+
+<!-- P10: LOG AGGREGATION -->
+<section id="p10">
+  <h2>⑩ Log Aggregation — ELK Stack</h2>
+  <span class="chip chip-purple">Padrão #10 do curso</span>
+  <span class="chip chip-blue">Logstash + Elasticsearch + Kibana</span>
+
+  <div class="feynman">
+    <div class="feynman-title">💡 Feynman</div>
+    <p>Com 4 serviços, debugar um problema rastreando logs em terminais separados é impraticável. O ELK centraliza: cada serviço envia logs estruturados (JSON) via TCP para o Logstash → que processa e armazena no Elasticsearch → onde o Kibana permite buscar "todos os logs com traceId=X das últimas 2 horas em todos os serviços".</p>
+  </div>
+
+  <div class="diagram">
+  ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐
+  │ auth-user  │ │  course    │ │notification│ │  gateway   │
+  │ logback    │ │ logback    │ │ logback    │ │ logback    │
+  └─────┬──────┘ └─────┬──────┘ └─────┬──────┘ └─────┬──────┘
+        │              │              │              │
+        └──────────────┴──────────────┴──────────────┘
+                  TCP JSON → Logstash :5001
+                            │
+                            ▼
+                  Elasticsearch :9201
+                  index: decoder-logs-{service}-{date}
+                            │
+                            ▼
+                       Kibana :5602
+                  Discover → busca por service, traceId, level</div>
+
+  <h3>Configuração logback (todos os serviços)</h3>
+  <div class="code-block">
+    <span class="label">xml — logback-spring.xml</span>
+    <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+    <pre>&lt;appender name="LOGSTASH" class="net.logstash.logback.appender.LogstashTcpSocketAppender"&gt;
+  &lt;destination&gt;logstash:5001&lt;/destination&gt;
+  &lt;encoder class="net.logstash.logback.encoder.LogstashEncoder"&gt;
+    &lt;customFields&gt;{"app_name":"auth-user-service"}&lt;/customFields&gt;
+  &lt;/encoder&gt;
+&lt;/appender&gt;</pre>
+  </div>
+
+  <h3>Como validar</h3>
+  <div class="code-block">
+    <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+    <pre># Buscar logs no Elasticsearch diretamente
+curl -s "http://localhost:9201/decoder-logs-*/_search?q=level:ERROR&size=5" | python3 -m json.tool
+
+# Ou abrir Kibana para interface visual
+open http://localhost:5602
+# Stack Management → Index Patterns → criar: decoder-logs-*</pre>
+  </div>
+
+  <div class="callout">
+    Kibana primeiro uso: crie o Data View com pattern <code>decoder-logs-*</code> e timestamp field <code>@timestamp</code>. Depois em Discover você pode filtrar por <code>app_name: "course-service"</code> ou <code>traceId: "abc123"</code>.
+  </div>
+</section>
+
+<!-- JWT + BLACKLIST -->
+<section id="jwt">
+  <h2>🔐 JWT com JTI + Redis Blacklist</h2>
+  <span class="chip chip-blue">Melhoria arquitetural #1</span>
+
+  <div class="feynman">
+    <div class="feynman-title">💡 Feynman</div>
+    <p>JWT é stateless por natureza — o servidor não guarda tokens emitidos. O problema: como invalidar um token antes de expirar (logout, senha trocada, conta comprometida)? Solução: cada token recebe um ID único (JTI — JWT ID). No logout, o JTI vai para uma blacklist no Redis com TTL igual ao tempo restante do token. O Gateway consulta a blacklist em cada request.</p>
+  </div>
+
+  <div class="diagram">
+  Login → gera JWT com campo "jti": "uuid-único"
+
+  Request normal:
+  Client ──Bearer JWT──→ Gateway ──valida assinatura──→ Redis.get(jti) == null? ──→ OK
+
+  Após logout:
+  POST /auth/users/logout ──→ auth-user ──→ Redis.set(jti, "revoked", TTL=tempo_restante)
+  Client ──Bearer JWT──→ Gateway ──Redis.get(jti) == "revoked"──→ 401 Unauthorized</div>
+
+  <h3>Fluxo de logout</h3>
+  <div class="code-block">
+    <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+    <pre># Login
+TOKEN=$(curl -s -X POST http://localhost:8080/auth/users/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"testuser","password":"Test@1234"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
+
+# Chamar rota protegida — funciona
+curl -s http://localhost:8080/auth/users \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+
+# Logout — invalida o JTI no Redis
+curl -s -X POST http://localhost:8080/auth/users/logout \
+  -H "Authorization: Bearer $TOKEN" -v
+
+# Tentar novamente com mesmo token — deve retornar 401
+curl -sv http://localhost:8080/auth/users \
+  -H "Authorization: Bearer $TOKEN" 2>&1 | grep "< HTTP"</pre>
+  </div>
+</section>
+
+<!-- TRANSACTIONAL OUTBOX -->
+<section id="outbox">
+  <h2>📤 Transactional Outbox Pattern</h2>
+  <span class="chip chip-blue">Melhoria arquitetural #2</span>
+
+  <div class="feynman">
+    <div class="feynman-title">💡 Feynman</div>
+    <p>Problema: você salva o usuário no banco e tenta publicar o evento no RabbitMQ. O banco salva mas o RabbitMQ cai — o evento se perde. O Outbox resolve: <strong>salva o evento na mesma transação do banco</strong> (tabela <code>outbox_events</code>). Um publisher em background lê o outbox e publica no RabbitMQ. Se o MQ falhar, o evento fica no outbox para reprocessar.</p>
+  </div>
+
+  <div class="diagram">
+  Transação Atômica (um único commit):
+  ┌──────────────────────────────────────────┐
+  │  INSERT INTO users (...)                 │
+  │  INSERT INTO outbox_events (             │
+  │    event_type='user.created',            │
+  │    payload='{"userId":...}',             │
+  │    published=false                       │
+  │  )                                       │
+  └──────────────────────────────────────────┘
+              │ commit OK
+              ▼
+  @Scheduled(5s): OutboxPublisher
+    SELECT * FROM outbox_events WHERE published=false
+    Para cada evento:
+      RabbitMQ.publish(event)
+      UPDATE outbox_events SET published=true WHERE id=?</div>
+
+  <h3>Verificar tabela outbox</h3>
+  <div class="sql-block">
+    <div class="sql-label">SQL — verificar eventos no outbox</div>
+    <pre>docker exec -it decoder-poc-postgres-1 psql -U authuser -d authuser_db -c "
+SELECT id, event_type, published, created_at
+FROM outbox_events
+ORDER BY created_at DESC
+LIMIT 10;"</pre>
+  </div>
+
+  <div class="callout">
+    Eventos com <code>published=false</code> são "pendentes". Em circunstâncias normais, devem ser processados em ≤5 segundos (intervalo do @Scheduled).
+  </div>
+</section>
+
+<!-- IDEMPOTÊNCIA -->
+<section id="idempotency">
+  <h2>🔁 Idempotência — processed_events</h2>
+  <span class="chip chip-blue">Melhoria arquitetural #3</span>
+
+  <div class="feynman">
+    <div class="feynman-title">💡 Feynman</div>
+    <p>O RabbitMQ pode entregar o mesmo evento mais de uma vez (at-least-once delivery). Sem controle, você cria duas matrículas para um enrollment.created duplicado. A solução: ao processar um evento, <strong>salve o eventId na tabela processed_events</strong>. Antes de processar, verifique se o ID já existe — se sim, ignore. É idempotente: pode receber N vezes, o efeito é sempre o mesmo.</p>
+  </div>
+
+  <div class="sql-block">
+    <div class="sql-label">SQL — verificar eventos processados (course-service)</div>
+    <pre>docker exec -it decoder-poc-postgres-1 psql -U courseuser -d course_db -c "
+SELECT event_id, processed_at
+FROM processed_events
+ORDER BY processed_at DESC
+LIMIT 10;"</pre>
+  </div>
+
+  <h3>Teste de idempotência manual</h3>
+  <div class="code-block">
+    <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+    <pre># Publicar manualmente o mesmo evento duas vezes no RabbitMQ via Management API
+# (simula redelivery do broker)
+EVENT_PAYLOAD='{"eventId":"test-uuid-123","userId":"user-uuid","username":"testuser","email":"test@test.com","fullName":"Test"}'
+
+# Publicar via RabbitMQ HTTP API
+for i in {1..3}; do
+  curl -s -u guest:guest -X POST http://localhost:15672/api/exchanges/%2F/ms.users.exchange/publish \
+    -H "Content-Type: application/json" \
+    -d "{\"properties\":{},\"routing_key\":\"user.created\",\"payload\":\"$EVENT_PAYLOAD\",\"payload_encoding\":\"string\"}"
+  echo " (tentativa $i)"
+done
+
+# Verificar: deve ter só 1 entrada em processed_events com esse eventId
+docker exec -it decoder-poc-postgres-1 psql -U courseuser -d course_db \
+  -c "SELECT count(*) FROM processed_events WHERE event_id='test-uuid-123';"
+# Esperado: count = 1</pre>
+  </div>
+</section>
+
+<!-- CQRS LIGHT -->
+<section id="cqrs">
+  <h2>📊 CQRS Light — Interface Projections</h2>
+  <span class="chip chip-blue">Melhoria arquitetural #4</span>
+
+  <div class="feynman">
+    <div class="feynman-title">💡 Feynman</div>
+    <p>CQRS (Command Query Responsibility Segregation) separa leitura de escrita. A versão "light" usa <strong>Spring Data Interface Projections</strong>: ao invés de retornar a entidade completa (que pode ter campos sensíveis ou pesados), você define uma interface com só os campos que o endpoint precisa. A query SQL automaticamente faz SELECT só desses campos.</p>
+  </div>
+
+  <div class="code-block">
+    <span class="label">java — CourseListView.java (projeção de listagem)</span>
+    <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+    <pre>// Endpoint GET /courses → retorna só os campos de listagem
+public interface CourseListView {
+    UUID getCourseId();
+    String getName();
+    String getCourseStatus();
+    String getCourseLevel();
+    // NÃO inclui description, createdAt, updatedAt — não precisamos na lista
+}
+
+// Repository usa a projeção:
+Page&lt;CourseListView&gt; findAllProjectedBy(Pageable pageable);</pre>
+  </div>
+
+  <h3>Diferença de payload</h3>
+  <table>
+    <tr><th>Endpoint</th><th>Projeção</th><th>Campos retornados</th></tr>
+    <tr><td>GET /courses</td><td>CourseListView</td><td>id, name, status, level</td></tr>
+    <tr><td>GET /courses/{id}</td><td>CourseDetailView</td><td>todos os campos + módulos</td></tr>
+    <tr><td>POST/PUT /courses</td><td>CourseModel (entidade)</td><td>comando — retorna completo</td></tr>
+  </table>
+</section>
+
+<!-- RATE LIMITING -->
+<section id="ratelimit">
+  <h2>🚦 Rate Limiting — Redis Token Bucket</h2>
+  <span class="chip chip-blue">Melhoria arquitetural #5</span>
+
+  <div class="feynman">
+    <div class="feynman-title">💡 Feynman</div>
+    <p>Imagine um balde com fichas. A cada request, você tira uma ficha. O balde se reenche a uma taxa fixa (replenish rate). Quando o balde está vazio, o próximo request recebe <strong>429 Too Many Requests</strong>. No Spring Cloud Gateway, isso é implementado com Redis para ser consistente entre múltiplas instâncias do Gateway.</p>
+  </div>
+
+  <div class="diagram">
+  Configuração:
+  replenishRate: 10   → 10 tokens adicionados por segundo
+  burstCapacity: 20   → balde pode acumular até 20 tokens
+  requestedTokens: 1  → cada request consome 1 token
+
+  Resultado: 10 req/s em estado normal, bursts de até 20 req/s</div>
+
+  <h3>Como forçar o rate limit</h3>
+  <div class="code-block">
+    <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+    <pre># Disparar 30 requests seguidos — os últimos devem retornar 429
+for i in {1..30}; do
+  STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+    -H "Authorization: Bearer $TOKEN" \
+    http://localhost:8080/api/courses)
+  echo "Request $i: HTTP $STATUS"
+done</pre>
+  </div>
+
+  <div class="callout">
+    Headers de resposta úteis: <code>X-RateLimit-Remaining</code> e <code>X-RateLimit-Replenish-Rate</code> indicam quantos tokens restam.
+  </div>
+</section>
+
+<!-- DISTRIBUTED TRACING -->
+<section id="tracing">
+  <h2>🔭 Distributed Tracing — Micrometer + Zipkin</h2>
+  <span class="chip chip-blue">Melhoria arquitetural #6</span>
+
+  <div class="feynman">
+    <div class="feynman-title">💡 Feynman</div>
+    <p>Uma request passa por Gateway → course-service → auth-user (Feign) → RabbitMQ → notification. Sem tracing, você não sabe onde a latência está. O Micrometer injeta um <strong>traceId</strong> na primeira entrada e propaga pelos serviços via headers HTTP e MDC de log. O Zipkin visualiza a árvore de spans completa com tempo de cada hop.</p>
+  </div>
+
+  <div class="diagram">
+  Request: GET /api/courses/{id}/enrollments
+  traceId: abc123
+
+  Zipkin timeline:
+  ├─ [Gateway]                0ms → 45ms   (total span)
+  │    ├─ [course-service]    2ms → 38ms
+  │    │    └─ [Feign→auth]   5ms → 22ms   ← latência aqui!
+  │    └─ [RabbitMQ publish]  39ms → 44ms
+  └─ [notification consumer]  50ms → 55ms  (span assíncrono)</div>
+
+  <h3>Como visualizar</h3>
+  <div class="code-block">
+    <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+    <pre># Fazer uma request para gerar traces
+curl -s http://localhost:8080/api/courses \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+
+# Abrir Zipkin UI
+open http://localhost:9411
+
+# Buscar por Service Name: "course-service" → Run Query
+# Clicar num trace para ver o breakdown de spans</pre>
+  </div>
+
+  <h3>traceId nos logs do ELK</h3>
+  <div class="code-block">
+    <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+    <pre># Pegar o traceId de um log no Elasticsearch
+curl -s "http://localhost:9201/decoder-logs-*/_search?q=app_name:course-service&size=1" | \
+  python3 -c "import sys,json; d=json.load(sys.stdin); print(d['hits']['hits'][0]['_source'].get('traceId','N/A'))"</pre>
+  </div>
+</section>
+
+<!-- DEMO END-TO-END -->
+<section id="demo">
+  <h2>🎬 Demo End-to-End — Fluxo Completo</h2>
+
+  <p>Execute este script para provar que todos os padrões funcionam em conjunto:</p>
+
+  <div class="code-block">
+    <span class="label">bash — demo.sh — copie e execute no terminal</span>
+    <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+    <pre>#!/bin/bash
+set -e
+BASE="http://localhost:8080"
+echo "=== DECODER POC — DEMO END-TO-END ==="
+
+echo -e "\n[1] Registrar usuário admin..."
+curl -sf -X POST "$BASE/auth/users" \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","email":"admin@decoder.com","password":"Admin@1234","fullName":"Admin User"}' \
+  | python3 -m json.tool
+
+echo -e "\n[2] Login → obter JWT..."
+TOKEN=$(curl -sf -X POST "$BASE/auth/users/login" \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"Admin@1234"}' \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
+echo "JWT obtido: ${TOKEN:0:40}..."
+
+echo -e "\n[3] Criar curso..."
+COURSE=$(curl -sf -X POST "$BASE/api/courses" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"name":"Decoder POC Course","description":"Todos os 10 padrões","courseStatus":"ACTIVE","courseLevel":"ADVANCED","coursePrice":0}')
+COURSE_ID=$(echo $COURSE | python3 -c "import sys,json; print(json.load(sys.stdin)['courseId'])")
+echo "Course ID: $COURSE_ID"
+
+echo -e "\n[4] Matricular no curso (Saga Coreografia)..."
+curl -sf -X POST "$BASE/api/courses/$COURSE_ID/enrollments" \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+
+echo -e "\n[5] Verificar notificação criada pelo evento..."
+sleep 2
+curl -sf "$BASE/api/notifications" \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+
+echo -e "\n[6] Verificar JWT blacklist (logout + reuso)..."
+curl -sf -X POST "$BASE/auth/users/logout" \
+  -H "Authorization: Bearer $TOKEN" -w "\nHTTP Logout: %{http_code}\n"
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+  "$BASE/auth/users" -H "Authorization: Bearer $TOKEN")
+echo "Reuso do token após logout: HTTP $HTTP_CODE (esperado: 401)"
+
+echo -e "\n[7] Verificar Eureka..."
+curl -s http://localhost:8761/eureka/apps | grep -o '<app>.*</app>' | sed 's|<[^>]*>||g' | sort -u
+
+echo -e "\n=== DEMO CONCLUIDO ==="</pre>
+  </div>
+
+  <h3>Verificações pós-demo</h3>
+  <ul class="steps">
+    <li>Eureka em <a href="http://localhost:8761" style="color:var(--accent)">:8761</a> mostra 5 instâncias UP</li>
+    <li>RabbitMQ em <a href="http://localhost:15672" style="color:var(--accent)">:15672</a> → Queues, todos com messages ready = 0 (processadas)</li>
+    <li>Kibana em <a href="http://localhost:5602" style="color:var(--accent)">:5602</a> → Discover → logs dos 4 serviços</li>
+    <li>Zipkin em <a href="http://localhost:9411" style="color:var(--accent)">:9411</a> → traces da demo visíveis</li>
+    <li>Grafana em <a href="http://localhost:3000" style="color:var(--accent)">:3000</a> → dashboards com métricas dos serviços</li>
+  </ul>
+</section>
+
+<!-- QUIZ -->
+<section id="quiz">
+  <h2>🧠 Quiz Final — Active Recall</h2>
+  <p>Teste seu entendimento sem consultar o material. 10 questões sobre os padrões implementados.</p>
+
+  <form id="quizForm">
+
+    <div class="quiz-q" data-correct="b">
+      <div class="q-text">1. Qual é o principal problema que o Transactional Outbox Pattern resolve?</div>
+      <label><input type="radio" name="q1" value="a"> Performance na publicação de eventos no RabbitMQ</label>
+      <label><input type="radio" name="q1" value="b"> Garantir consistência entre salvar no banco e publicar o evento (dual write problem)</label>
+      <label><input type="radio" name="q1" value="c"> Reduzir a quantidade de mensagens no broker</label>
+      <label><input type="radio" name="q1" value="d"> Ordenar eventos por timestamp</label>
+    </div>
+
+    <div class="quiz-q" data-correct="c">
+      <div class="q-text">2. No Circuit Breaker, o que acontece no estado HALF-OPEN?</div>
+      <label><input type="radio" name="q2" value="a"> Todas as requisições são bloqueadas indefinidamente</label>
+      <label><input type="radio" name="q2" value="b"> O serviço é reiniciado automaticamente</label>
+      <label><input type="radio" name="q2" value="c"> Um número limitado de requisições de teste passa para verificar se o serviço se recuperou</label>
+      <label><input type="radio" name="q2" value="d"> O fallback é desabilitado temporariamente</label>
+    </div>
+
+    <div class="quiz-q" data-correct="a">
+      <div class="q-text">3. A diferença entre Event Notification (P7) e Event-Carried State Transfer (P8) é:</div>
+      <label><input type="radio" name="q3" value="a"> EN carrega só o aviso ("algo aconteceu"), ECST carrega o estado completo no payload</label>
+      <label><input type="radio" name="q3" value="b"> EN usa RabbitMQ, ECST usa Kafka</label>
+      <label><input type="radio" name="q3" value="c"> EN é síncrono, ECST é assíncrono</label>
+      <label><input type="radio" name="q3" value="d"> EN tem idempotência, ECST não tem</label>
+    </div>
+
+    <div class="quiz-q" data-correct="d">
+      <div class="q-text">4. Por que o API Gateway valida o JWT em vez de cada serviço validar individualmente?</div>
+      <label><input type="radio" name="q4" value="a"> Porque o JWT secret só existe no Gateway</label>
+      <label><input type="radio" name="q4" value="b"> Porque os serviços não têm Spring Security</label>
+      <label><input type="radio" name="q4" value="c"> Porque JWT não pode ser validado em Java 26</label>
+      <label><input type="radio" name="q4" value="d"> Para evitar duplicação de lógica e centralizar a barreira de segurança em um ponto</label>
+    </div>
+
+    <div class="quiz-q" data-correct="b">
+      <div class="q-text">5. O Config Server busca o arquivo de configuração do auth-user-service com perfil dev. Qual deve ser o nome do arquivo?</div>
+      <label><input type="radio" name="q5" value="a"> auth-user-dev.yml</label>
+      <label><input type="radio" name="q5" value="b"> auth-user-service-dev.yml</label>
+      <label><input type="radio" name="q5" value="c"> dev-auth-user-service.yml</label>
+      <label><input type="radio" name="q5" value="d"> application-auth-user-service.yml</label>
+    </div>
+
+    <div class="quiz-q" data-correct="c">
+      <div class="q-text">6. Na Saga por Coreografia, quem é responsável por acionar o próximo passo após um serviço completar sua parte?</div>
+      <label><input type="radio" name="q6" value="a"> O orquestrador central (Saga Manager)</label>
+      <label><input type="radio" name="q6" value="b"> O API Gateway via callback</label>
+      <label><input type="radio" name="q6" value="c"> O próprio serviço que completou, publicando um evento que o próximo consome</label>
+      <label><input type="radio" name="q6" value="d"> O cliente HTTP que iniciou a operação</label>
+    </div>
+
+    <div class="quiz-q" data-correct="a">
+      <div class="q-text">7. Qual é o principal tradeoff do Event-Carried State Transfer (réplica local de UserData no course-service)?</div>
+      <label><input type="radio" name="q7" value="a"> Eventual consistency — dados podem estar brevemente desatualizados</label>
+      <label><input type="radio" name="q7" value="b"> Aumento de latência em todas as queries</label>
+      <label><input type="radio" name="q7" value="c"> Necessidade de transações distribuídas 2PC</label>
+      <label><input type="radio" name="q7" value="d"> O course-service fica fortemente acoplado ao auth-user-service</label>
+    </div>
+
+    <div class="quiz-q" data-correct="d">
+      <div class="q-text">8. Como a idempotência via processed_events funciona?</div>
+      <label><input type="radio" name="q8" value="a"> Deduplicando mensagens no RabbitMQ antes de entregar</label>
+      <label><input type="radio" name="q8" value="b"> Usando transações XA (two-phase commit) entre banco e MQ</label>
+      <label><input type="radio" name="q8" value="c"> Filtrando eventos com mesmo timestamp no consumer</label>
+      <label><input type="radio" name="q8" value="d"> Antes de processar, verifica se eventId já está na tabela; se sim, descarta o evento</label>
+    </div>
+
+    <div class="quiz-q" data-correct="b">
+      <div class="q-text">9. O CQRS Light com Interface Projections gera qual benefício principal?</div>
+      <label><input type="radio" name="q9" value="a"> Permite usar dois bancos de dados distintos para leitura e escrita</label>
+      <label><input type="radio" name="q9" value="b"> A query SQL seleciona apenas os campos da interface, reduzindo payload e processamento</label>
+      <label><input type="radio" name="q9" value="c"> Habilita cache automático para todas as consultas de leitura</label>
+      <label><input type="radio" name="q9" value="d"> Separa fisicamente os serviços de leitura e escrita em containers distintos</label>
+    </div>
+
+    <div class="quiz-q" data-correct="c">
+      <div class="q-text">10. Por que o Token Bucket Rate Limiter usa Redis em vez de armazenar o estado em memória no Gateway?</div>
+      <label><input type="radio" name="q10" value="a"> Redis é mais rápido que memória JVM para esse caso</label>
+      <label><input type="radio" name="q10" value="b"> Spring Cloud Gateway não suporta rate limit em memória</label>
+      <label><input type="radio" name="q10" value="c"> Para funcionar corretamente com múltiplas instâncias do Gateway (estado compartilhado)</label>
+      <label><input type="radio" name="q10" value="d"> Para persistir o histórico de rate limit entre restarts do Gateway</label>
+    </div>
+
+    <div style="margin-top: 24px; text-align: center;">
+      <button type="button" class="btn" onclick="submitQuiz()">Ver Resultado</button>
+      <button type="button" class="btn btn-outline" style="margin-left: 12px;" onclick="resetQuiz()">Refazer</button>
+    </div>
+  </form>
+
+  <div class="quiz-result" id="quizResult">
+    <div class="quiz-score" id="quizScore">0/10</div>
+    <div class="quiz-msg" id="quizMsg"></div>
+    <div style="margin-top: 16px;">
+      <button class="btn btn-outline" onclick="resetQuiz()">Tentar Novamente</button>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<script>
+// COPY CODE
+function copyCode(btn) {
+  const pre = btn.parentElement.querySelector('pre');
+  navigator.clipboard.writeText(pre.textContent.trim()).then(() => {
+    btn.textContent = 'Copiado!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+// PROGRESS TRACKER
+const sections = ['intro','stack','p1','p2','p3','p4','p5','p6','p7','p8','p9','p10','jwt','outbox','idempotency','cqrs','ratelimit','tracing','demo','quiz'];
+const visited = new Set(JSON.parse(localStorage.getItem('decoder_visited') || '[]'));
+
+function updateProgress() {
+  const total = sections.length;
+  const count = visited.size;
+  document.getElementById('progressFill').style.width = (count / total * 100) + '%';
+  document.getElementById('progressLabel').textContent = count + ' de ' + total + ' tópicos visitados';
+}
+
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting && e.target.id) {
+      visited.add(e.target.id);
+      localStorage.setItem('decoder_visited', JSON.stringify([...visited]));
+      updateProgress();
+      // Highlight nav link
+      document.querySelectorAll('nav a').forEach(a => {
+        a.classList.remove('active');
+        if (a.getAttribute('href') === '#' + e.target.id) a.classList.add('active');
+      });
+    }
+  });
+}, { threshold: 0.2 });
+
+document.querySelectorAll('section[id]').forEach(s => observer.observe(s));
+updateProgress();
+
+// QUIZ
+function submitQuiz() {
+  const questions = document.querySelectorAll('.quiz-q');
+  let score = 0;
+  let answered = 0;
+
+  questions.forEach(q => {
+    const correct = q.dataset.correct;
+    const selected = q.querySelector('input:checked');
+    if (!selected) return;
+    answered++;
+    const labels = q.querySelectorAll('label');
+    labels.forEach(l => {
+      const val = l.querySelector('input').value;
+      if (val === correct) l.classList.add('correct');
+      if (selected.value === val && val !== correct) l.classList.add('wrong');
+    });
+    if (selected.value === correct) score++;
+    q.querySelectorAll('input').forEach(i => i.disabled = true);
+  });
+
+  if (answered < 10) {
+    alert('Responda todas as 10 questões antes de ver o resultado.');
+    return;
+  }
+
+  const result = document.getElementById('quizResult');
+  document.getElementById('quizScore').textContent = score + '/10';
+  const msgs = {
+    10: '🏆 Perfeito! Você domina todos os padrões.',
+    9: '🥇 Excelente! Quase lá.',
+    8: '✅ Muito bom! Revise as questões erradas.',
+    7: '👍 Bom. Reforce os pontos fracos.',
+    6: '📚 Médio. Releia as seções dos padrões que errou.',
+    5: '🔄 Metade certa. Vale reler o material.',
+    0: '📖 Recomece pelo início — o material está todo aqui.'
+  };
+  document.getElementById('quizMsg').textContent = msgs[score] || msgs[Math.floor(score/2)*2] || '📖 Continue estudando — o material está todo aqui.';
+  result.style.display = 'block';
+  result.scrollIntoView({ behavior: 'smooth' });
+}
+
+function resetQuiz() {
+  document.getElementById('quizForm').reset();
+  document.querySelectorAll('.quiz-q label').forEach(l => {
+    l.classList.remove('correct','wrong');
+  });
+  document.querySelectorAll('.quiz-q input').forEach(i => i.disabled = false);
+  document.getElementById('quizResult').style.display = 'none';
+}
+
+// SMOOTH SCROLL for nav links
+document.querySelectorAll('nav a[href^="#"]').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    const target = document.querySelector(a.getAttribute('href'));
+    if (target) target.scrollIntoView({ behavior: 'smooth' });
+  });
+});
+</script>
+</body>
+</html>

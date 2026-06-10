@@ -3,7 +3,6 @@ package com.decoder.gateway.controller;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -14,7 +13,7 @@ import java.util.Map;
 @RequestMapping("/fallback")
 public class FallbackController {
 
-    @GetMapping("/auth")
+    @RequestMapping("/auth")
     public ResponseEntity<Map<String, String>> authFallback() {
         log.warn("Circuit breaker opened for auth-user-service");
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
@@ -24,7 +23,7 @@ public class FallbackController {
         ));
     }
 
-    @GetMapping("/courses")
+    @RequestMapping("/courses")
     public ResponseEntity<Map<String, String>> courseFallback() {
         log.warn("Circuit breaker opened for course-service");
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
@@ -34,7 +33,7 @@ public class FallbackController {
         ));
     }
 
-    @GetMapping("/notifications")
+    @RequestMapping("/notifications")
     public ResponseEntity<Map<String, String>> notificationFallback() {
         log.warn("Circuit breaker opened for notification-service");
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
@@ -44,7 +43,7 @@ public class FallbackController {
         ));
     }
 
-    @GetMapping("/rate-limit")
+    @RequestMapping("/rate-limit")
     public ResponseEntity<Map<String, String>> rateLimitFallback() {
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(Map.of(
             "status", "TOO_MANY_REQUESTS",
